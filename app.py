@@ -4,6 +4,10 @@ import os
 import sys
 from groq import Groq
 from dotenv import load_dotenv
+from datetime import datetime
+import json
+import hashlib
+
 
 # Load environment variables from .env file (if present)
 load_dotenv()
@@ -35,7 +39,7 @@ from utils.ai_categorizer import AICategorizer
 app = Flask(__name__)
 
 # ---------------- INIT DATABASE ----------------
-from models import db, Expense, Asset, Liability
+from models import db, Expense, Asset, Liability, Portfolio, PriceAlert
 
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///money_mentor.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
@@ -610,6 +614,202 @@ def delete_item():
         return jsonify({"error": str(e)}), 404
     except Exception as e:
         return jsonify({"error": str(e)}), 400
+
+# ---------------- PORTFOLIO TRACKER ----------------
+
+# Simple cache for stock prices (5 minutes)
+price_cache = {}
+CACHE_DURATION = 300  # 5 seconds for testing, change to 300 for production
+
+def get_cached_price(symbol):
+    """Get cached stock price or fetch new one"""
+    cache_key = symbol.upper()
+    now = datetime.now().timestamp()
+    
+    if cache_key in price_cache:
+        cached_time, cached_price = price_cache[cache_key]
+        if now - cached_time < CACHE_DURATION:
+            return cached_price
+    return None
+
+def set_cached_price(symbol, price):
+    """Cache stock price"""
+    cache_key = symbol.upper()
+    price_cache[cache_key] = (datetime.now().timestamp(), price)
+
+@app.route("/portfolio/add", methods=["POST"])
+def add_portfolio_item():
+    """Add a stock to portfolio"""
+    try:
+        data = request.json
+        symbol = data.get("symbol", "").upper()
+        name = data.get("name", symbol)
+        quantity = float(data.get("quantity", 0))
+        buy_price = float(data.get("buy_price", 0))
+        buy_date = data.get("buy_date", datetime.now().strftime("%Y-%m-%d"))
+        investment_type = data.get("investment_type", "stock")
+        
+        if not symbol or quantity <= 0 or buy_price <= 0:
+            return jsonify({"error": "Invalid input"}), 400
+        
+        # Validate stock symbol
+        try:
+            import yfinance as yf
+            stock = yf.Ticker(symbol)
+            info = stock.info
+            if not info or 'regularMarketPrice' not in info:
+                # Try to get basic info
+                hist = stock.history(period="1d")
+                if hist.empty:
+                    return jsonify({"error": f"Invalid symbol: {symbol}"}), 400
+            name = info.get('longName', name)
+        except:
+            pass
+        
+        portfolio_item = Portfolio(
+            symbol=symbol,
+            name=name,
+            quantity=quantity,
+            buy_price=buy_price,
+            buy_date=buy_date,
+            investment_type=investment_type
+        )
+        db.session.add(portfolio_item)
+        db.session.commit()
+        
+        return jsonify({"success": True, "message": f"Added {symbol} to portfolio"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+@app.route("/portfolio/list", methods=["GET"])
+def get_portfolio():
+    """Get all portfolio items with live prices"""
+    try:
+        items = Portfolio.query.all()
+        portfolio_data = []
+        total_invested = 0
+        total_current = 0
+        
+        for item in items:
+            # Get live price (with cache)
+            cached_price = get_cached_price(item.symbol)
+            if cached_price:
+                current_price = cached_price
+            else:
+                try:
+                    import yfinance as yf
+                    stock = yf.Ticker(item.symbol)
+                    hist = stock.history(period="1d")
+                    if not hist.empty:
+                        current_price = hist['Close'].iloc[-1]
+                        set_cached_price(item.symbol, current_price)
+                    else:
+                        current_price = item.buy_price
+                except:
+                    current_price = item.buy_price
+            
+            item_data = item.to_dict(current_price)
+            portfolio_data.append(item_data)
+            total_invested += item_data["invested_value"]
+            total_current += item_data["current_value"]
+        
+        total_pnl = total_current - total_invested
+        total_pnl_percent = (total_pnl / total_invested * 100) if total_invested > 0 else 0
+        
+        return jsonify({
+            "success": True,
+            "holdings": portfolio_data,
+            "summary": {
+                "total_invested": round(total_invested, 2),
+                "total_current": round(total_current, 2),
+                "total_pnl": round(total_pnl, 2),
+                "total_pnl_percent": round(total_pnl_percent, 2),
+                "total_holdings": len(portfolio_data)
+            }
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+@app.route("/portfolio/delete/<int:item_id>", methods=["DELETE"])
+def delete_portfolio_item(item_id):
+    """Remove item from portfolio"""
+    try:
+        item = Portfolio.query.get(item_id)
+        if not item:
+            return jsonify({"error": "Item not found"}), 404
+        
+        db.session.delete(item)
+        db.session.commit()
+        return jsonify({"success": True, "message": "Item removed"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+@app.route("/portfolio/alert/add", methods=["POST"])
+def add_price_alert():
+    """Add price alert for a stock"""
+    try:
+        data = request.json
+        symbol = data.get("symbol", "").upper()
+        target_price = float(data.get("target_price", 0))
+        condition = data.get("condition", "above")
+        
+        alert = PriceAlert(
+            symbol=symbol,
+            target_price=target_price,
+            condition=condition
+        )
+        db.session.add(alert)
+        db.session.commit()
+        
+        return jsonify({"success": True, "message": f"Alert set for {symbol} at ₹{target_price}"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+@app.route("/portfolio/alerts", methods=["GET"])
+def get_alerts():
+    """Get all price alerts"""
+    try:
+        alerts = PriceAlert.query.all()
+        return jsonify({"success": True, "alerts": [a.to_dict() for a in alerts]})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+@app.route("/portfolio/check-alerts", methods=["GET"])
+def check_price_alerts():
+    """Check and trigger price alerts"""
+    try:
+        alerts = PriceAlert.query.filter_by(is_triggered=False).all()
+        triggered = []
+        
+        for alert in alerts:
+            cached_price = get_cached_price(alert.symbol)
+            if cached_price:
+                current_price = cached_price
+            else:
+                try:
+                    import yfinance as yf
+                    stock = yf.Ticker(alert.symbol)
+                    hist = stock.history(period="1d")
+                    if not hist.empty:
+                        current_price = hist['Close'].iloc[-1]
+                    else:
+                        continue
+                except:
+                    continue
+            
+            if alert.condition == "above" and current_price >= alert.target_price:
+                alert.is_triggered = True
+                triggered.append({"symbol": alert.symbol, "target": alert.target_price, "current": current_price})
+            elif alert.condition == "below" and current_price <= alert.target_price:
+                alert.is_triggered = True
+                triggered.append({"symbol": alert.symbol, "target": alert.target_price, "current": current_price})
+        
+        db.session.commit()
+        return jsonify({"success": True, "triggered": triggered})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+
 
 
 # ---------------- RUN ----------------
