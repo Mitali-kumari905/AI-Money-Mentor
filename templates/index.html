@@ -407,6 +407,7 @@
     <div class="nav-item" data-page="sip"><span class="icon">📈</span> SIP Calculator</div>
     <div class="nav-item" data-page="tools"><span class="icon">🛠️</span> Tax & Stock</div>
     <div class="nav-item" data-page="score"><span class="icon">💰</span> Money Score</div>
+    <div class="nav-item" data-page="budget"><span class="icon">📅</span> Budget Planner</div>
 
     <div class="nav-section-title">Documents</div>
     <div class="nav-item" data-page="pdf"><span class="icon">📄</span> PDF Parser</div>
@@ -584,6 +585,79 @@
       </div>
     </div>
 
+    <!-- MONTHLY BUDGET PLANNER -->
+    <div id="budget" class="page">
+      <div class="page-title">📅 Monthly <span>Budget Planner</span></div>
+
+      <div class="stats-row" id="budgetStats">
+        <div class="stat-card"><div class="stat-label">Monthly Income</div><div class="stat-val" id="bIncome">₹0</div></div>
+        <div class="stat-card"><div class="stat-label">Total Budgeted</div><div class="stat-val" id="bBudgeted">₹0</div></div>
+        <div class="stat-card"><div class="stat-label">Total Spent</div><div class="stat-val" id="bSpent">₹0</div></div>
+        <div class="stat-card"><div class="stat-label">Remaining</div><div class="stat-val" id="bRemaining">₹0</div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">⚙️ Setup Your Month</div>
+        <div style="display:flex;gap:10px;align-items:flex-end;">
+          <div style="flex:1;">
+            <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px;">Monthly Income (₹)</label>
+            <input type="number" id="budgetIncome" placeholder="e.g. 50000" oninput="updateBudgetStats()">
+          </div>
+          <div style="flex:1;">
+            <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px;">Month</label>
+            <input type="month" id="budgetMonth">
+          </div>
+          <button class="btn btn-ghost" onclick="resetBudget()">Reset</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">➕ Add Category</div>
+        <div style="display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:10px;">
+          <input type="text" id="bCatName" placeholder="Category (e.g. Rent, Food)">
+          <input type="number" id="bCatBudget" placeholder="Budgeted ₹">
+          <input type="number" id="bCatSpent" placeholder="Spent ₹">
+          <button class="btn btn-gold" onclick="addBudgetCategory()">Add</button>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;">
+          <span style="font-size:11px;color:var(--muted);align-self:center;">Quick add:</span>
+          <button class="btn btn-ghost" style="padding:5px 10px;font-size:11px;" onclick="quickAdd('Housing')">🏠 Housing</button>
+          <button class="btn btn-ghost" style="padding:5px 10px;font-size:11px;" onclick="quickAdd('Food')">🍽️ Food</button>
+          <button class="btn btn-ghost" style="padding:5px 10px;font-size:11px;" onclick="quickAdd('Transport')">🚗 Transport</button>
+          <button class="btn btn-ghost" style="padding:5px 10px;font-size:11px;" onclick="quickAdd('Entertainment')">🎬 Entertainment</button>
+          <button class="btn btn-ghost" style="padding:5px 10px;font-size:11px;" onclick="quickAdd('Healthcare')">🏥 Healthcare</button>
+          <button class="btn btn-ghost" style="padding:5px 10px;font-size:11px;" onclick="quickAdd('Savings')">💰 Savings</button>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card" style="grid-column:1/-1;">
+          <div class="card-title">📋 Budget Breakdown</div>
+          <div id="budgetTable" style="overflow-x:auto;">
+            <div style="text-align:center;padding:30px;color:var(--muted);">No categories yet — add one above.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">🥧 Budget Allocation</div>
+          <canvas id="budgetPieChart" style="max-height:260px;"></canvas>
+        </div>
+        <div class="card">
+          <div class="card-title">📊 Budgeted vs Spent</div>
+          <canvas id="budgetBarChart" style="max-height:260px;"></canvas>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">🤖 AI Budget Analysis</div>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">Get personalised advice based on your current budget numbers.</p>
+        <button class="btn btn-gold" onclick="analyzeBudget()" id="analyzeBtn">Analyse My Budget</button>
+        <div id="budgetAdvice" style="margin-top:16px;"></div>
+      </div>
+    </div>
+
   </div>
 
   <script>
@@ -597,6 +671,7 @@
         if (this.dataset.page === 'portfolio') { refreshPortfolio(); loadAlerts(); }
         if (this.dataset.page === 'expense') loadExpenses();
         if (this.dataset.page === 'networth') loadNetWorth();
+        if (this.dataset.page === 'budget') { updateBudgetStats(); renderBudgetCharts(); }
       });
     });
 
@@ -839,6 +914,206 @@
     // Auto-refresh portfolio every 30 seconds
     setInterval(refreshPortfolio, 30000);
     refreshPortfolio();
+
+    // ========== MONTHLY BUDGET PLANNER ==========
+    let budgetCategories = [];
+    let budgetPieChart = null;
+    let budgetBarChart = null;
+
+    // Set current month as default
+    document.addEventListener('DOMContentLoaded', () => {
+      const monthInput = document.getElementById('budgetMonth');
+      if (monthInput) monthInput.value = new Date().toISOString().slice(0, 7);
+    });
+
+    function quickAdd(name) {
+      document.getElementById('bCatName').value = name;
+      document.getElementById('bCatBudget').focus();
+    }
+
+    function addBudgetCategory() {
+      const name = document.getElementById('bCatName').value.trim();
+      const budgeted = parseFloat(document.getElementById('bCatBudget').value) || 0;
+      const spent = parseFloat(document.getElementById('bCatSpent').value) || 0;
+
+      if (!name || budgeted <= 0) { alert('Enter a category name and budgeted amount.'); return; }
+
+      const existing = budgetCategories.findIndex(c => c.name.toLowerCase() === name.toLowerCase());
+      if (existing >= 0) {
+        budgetCategories[existing] = { name, budgeted, spent };
+      } else {
+        budgetCategories.push({ name, budgeted, spent });
+      }
+
+      document.getElementById('bCatName').value = '';
+      document.getElementById('bCatBudget').value = '';
+      document.getElementById('bCatSpent').value = '';
+      renderBudgetTable();
+      updateBudgetStats();
+      renderBudgetCharts();
+    }
+
+    function removeBudgetCategory(index) {
+      budgetCategories.splice(index, 1);
+      renderBudgetTable();
+      updateBudgetStats();
+      renderBudgetCharts();
+    }
+
+    function renderBudgetTable() {
+      const container = document.getElementById('budgetTable');
+      if (!budgetCategories.length) {
+        container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted);">No categories yet — add one above.</div>';
+        return;
+      }
+
+      const rows = budgetCategories.map((c, i) => {
+        const pct = c.budgeted > 0 ? Math.round(c.spent / c.budgeted * 100) : 0;
+        const overBudget = c.spent > c.budgeted;
+        const barColor = overBudget ? 'var(--red)' : pct >= 80 ? 'var(--gold)' : 'var(--teal)';
+        const statusClass = overBudget ? 'negative' : 'positive';
+        const diff = c.budgeted - c.spent;
+        return `
+          <tr>
+            <td style="text-align:left;font-weight:600;">${c.name}</td>
+            <td style="text-align:right;">₹${fmtNum(c.budgeted)}</td>
+            <td style="text-align:right;" class="${statusClass}">₹${fmtNum(c.spent)}</td>
+            <td style="text-align:right;" class="${diff < 0 ? 'negative' : 'positive'}">${diff < 0 ? '-' : '+'}₹${fmtNum(Math.abs(diff))}</td>
+            <td style="min-width:120px;padding:12px;">
+              <div style="background:rgba(255,255,255,0.06);border-radius:99px;height:6px;overflow:hidden;">
+                <div style="height:100%;width:${Math.min(pct,100)}%;background:${barColor};border-radius:99px;transition:width 0.3s;"></div>
+              </div>
+              <div style="font-size:10px;color:var(--muted);margin-top:3px;">${pct}% used</div>
+            </td>
+            <td><button class="btn btn-ghost" style="padding:4px 8px;" onclick="removeBudgetCategory(${i})">✖</button></td>
+          </tr>`;
+      }).join('');
+
+      container.innerHTML = `
+        <table class="holdings-table">
+          <thead><tr>
+            <th>Category</th>
+            <th style="text-align:right">Budgeted</th>
+            <th style="text-align:right">Spent</th>
+            <th style="text-align:right">Difference</th>
+            <th>Progress</th>
+            <th></th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>`;
+    }
+
+    function updateBudgetStats() {
+      const income = parseFloat(document.getElementById('budgetIncome').value) || 0;
+      const totalBudgeted = budgetCategories.reduce((s, c) => s + c.budgeted, 0);
+      const totalSpent = budgetCategories.reduce((s, c) => s + c.spent, 0);
+      const remaining = income - totalSpent;
+
+      document.getElementById('bIncome').innerHTML = `₹${fmtNum(income)}`;
+      document.getElementById('bBudgeted').innerHTML = `₹${fmtNum(totalBudgeted)}`;
+      document.getElementById('bSpent').innerHTML = `₹${fmtNum(totalSpent)}`;
+      document.getElementById('bRemaining').innerHTML = `<span class="${remaining < 0 ? 'negative' : 'positive'}">₹${fmtNum(remaining)}</span>`;
+    }
+
+    function renderBudgetCharts() {
+      if (!budgetCategories.length) return;
+
+      const labels = budgetCategories.map(c => c.name);
+      const budgetedVals = budgetCategories.map(c => c.budgeted);
+      const spentVals = budgetCategories.map(c => c.spent);
+      const colors = ['#d4a843','#14c8bf','#2ecc8a','#e05252','#7c72e0','#f0cc6e','#4ecdc4','#96ceb4'];
+
+      // Pie chart — budget allocation
+      const pieCanvas = document.getElementById('budgetPieChart');
+      if (pieCanvas) {
+        if (budgetPieChart) budgetPieChart.destroy();
+        budgetPieChart = new Chart(pieCanvas.getContext('2d'), {
+          type: 'doughnut',
+          data: { labels, datasets: [{ data: budgetedVals, backgroundColor: colors, borderWidth: 2, borderColor: 'rgba(0,0,0,0.3)' }] },
+          options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'bottom', labels: { color: '#eef0f5', font: { size: 11 } } } } }
+        });
+      }
+
+      // Bar chart — budgeted vs spent
+      const barCanvas = document.getElementById('budgetBarChart');
+      if (barCanvas) {
+        if (budgetBarChart) budgetBarChart.destroy();
+        budgetBarChart = new Chart(barCanvas.getContext('2d'), {
+          type: 'bar',
+          data: {
+            labels,
+            datasets: [
+              { label: 'Budgeted', data: budgetedVals, backgroundColor: 'rgba(212,168,67,0.7)', borderRadius: 6 },
+              { label: 'Spent', data: spentVals, backgroundColor: 'rgba(20,200,191,0.7)', borderRadius: 6 }
+            ]
+          },
+          options: {
+            responsive: true, maintainAspectRatio: true,
+            plugins: { legend: { labels: { color: '#eef0f5', font: { size: 11 } } } },
+            scales: { x: { ticks: { color: '#5a6a82' }, grid: { color: 'rgba(255,255,255,0.04)' } }, y: { ticks: { color: '#5a6a82' }, grid: { color: 'rgba(255,255,255,0.04)' } } }
+          }
+        });
+      }
+    }
+
+    async function analyzeBudget() {
+      const income = parseFloat(document.getElementById('budgetIncome').value) || 0;
+      if (!income) { alert('Enter your monthly income first.'); return; }
+      if (!budgetCategories.length) { alert('Add at least one budget category first.'); return; }
+
+      const btn = document.getElementById('analyzeBtn');
+      const adviceDiv = document.getElementById('budgetAdvice');
+      btn.disabled = true;
+      btn.textContent = 'Analysing…';
+      adviceDiv.innerHTML = '<div style="color:var(--muted);font-size:13px;">Asking AI advisor…</div>';
+
+      try {
+        const res = await fetch('/budget-planner/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ income, categories: budgetCategories })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          const s = data.summary;
+          adviceDiv.innerHTML = `
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;">
+              <div style="background:rgba(20,200,191,0.08);border-radius:12px;padding:12px;text-align:center;">
+                <div style="font-size:11px;color:var(--muted);">SAVINGS RATE</div>
+                <div style="font-size:20px;font-weight:800;color:var(--teal);">${s.savings_rate}%</div>
+              </div>
+              <div style="background:rgba(212,168,67,0.08);border-radius:12px;padding:12px;text-align:center;">
+                <div style="font-size:11px;color:var(--muted);">TOTAL SPENT</div>
+                <div style="font-size:20px;font-weight:800;color:var(--gold);">₹${fmtNum(s.total_spent)}</div>
+              </div>
+              <div style="background:rgba(46,204,138,0.08);border-radius:12px;padding:12px;text-align:center;">
+                <div style="font-size:11px;color:var(--muted);">REMAINING</div>
+                <div style="font-size:20px;font-weight:800;" class="${s.remaining < 0 ? 'negative' : 'positive'}">₹${fmtNum(s.remaining)}</div>
+              </div>
+            </div>
+            <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:14px;padding:16px;font-size:13px;line-height:1.7;white-space:pre-wrap;">${data.advice}</div>`;
+        } else {
+          adviceDiv.innerHTML = `<div class="negative" style="font-size:13px;">Error: ${data.error}</div>`;
+        }
+      } catch (e) {
+        adviceDiv.innerHTML = `<div class="negative" style="font-size:13px;">Failed to get AI advice. Check your connection.</div>`;
+      }
+
+      btn.disabled = false;
+      btn.textContent = 'Analyse My Budget';
+    }
+
+    function resetBudget() {
+      budgetCategories = [];
+      document.getElementById('budgetIncome').value = '';
+      document.getElementById('budgetMonth').value = new Date().toISOString().slice(0, 7);
+      document.getElementById('budgetAdvice').innerHTML = '';
+      renderBudgetTable();
+      updateBudgetStats();
+      if (budgetPieChart) { budgetPieChart.destroy(); budgetPieChart = null; }
+      if (budgetBarChart) { budgetBarChart.destroy(); budgetBarChart = null; }
+    }
   </script>
 </body>
 </html>

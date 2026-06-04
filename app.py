@@ -812,6 +812,72 @@ def check_price_alerts():
 
 
 
+# ---------------- 📅 MONTHLY BUDGET PLANNER ----------------
+@app.route("/budget-planner", methods=["GET"])
+def budget_planner():
+    return render_template("index.html")
+
+
+@app.route("/budget-planner/analyze", methods=["POST"])
+def analyze_budget():
+    try:
+        data = request.json
+        income = float(data.get("income", 0))
+        categories = data.get("categories", [])
+
+        if not income or not categories:
+            return jsonify({"error": "Income and categories are required"}), 400
+
+        total_budgeted = sum(float(c.get("budgeted", 0)) for c in categories)
+        total_spent = sum(float(c.get("spent", 0)) for c in categories)
+
+        budget_lines = "\n".join([
+            f"- {c['name']}: Budgeted ₹{c['budgeted']}, Spent ₹{c['spent']} "
+            f"({round(float(c['spent']) / float(c['budgeted']) * 100 if float(c.get('budgeted', 0)) > 0 else 0)}% used)"
+            for c in categories
+        ])
+
+        prompt = (
+            f"You are a personal finance advisor. Analyze this monthly budget:\n\n"
+            f"Monthly Income: ₹{income}\n"
+            f"Total Budgeted: ₹{total_budgeted}\n"
+            f"Total Spent: ₹{total_spent}\n"
+            f"Unallocated / Remaining: ₹{income - total_spent}\n\n"
+            f"Category Breakdown:\n{budget_lines}\n\n"
+            f"Give exactly 4 bullet points of concise, actionable advice:\n"
+            f"• Overall budget health assessment\n"
+            f"• Any category that is over budget or at risk\n"
+            f"• One specific saving tip based on the numbers\n"
+            f"• Recommended savings target for next month"
+        )
+
+        ai_res = client.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            messages=[
+                {"role": "system", "content": "You are a helpful personal finance advisor. Be concise and specific with numbers."},
+                {"role": "user", "content": prompt}
+            ]
+        )
+
+        advice = ai_res.choices[0].message.content.strip()
+
+        return jsonify({
+            "success": True,
+            "advice": advice,
+            "summary": {
+                "income": income,
+                "total_budgeted": round(total_budgeted, 2),
+                "total_spent": round(total_spent, 2),
+                "remaining": round(income - total_spent, 2),
+                "savings_rate": round((income - total_spent) / income * 100, 1) if income > 0 else 0
+            }
+        })
+
+    except Exception as e:
+        app.logger.error(f"Budget Planner Error: {str(e)}")
+        return jsonify({"error": str(e)}), 400
+
+
 # ---------------- RUN ----------------
 if __name__ == "__main__":
     debug_mode = os.getenv("FLASK_DEBUG", "False").lower() in ("true", "1", "yes")
