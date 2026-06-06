@@ -2636,7 +2636,26 @@
               You will save <strong>₹${fmtNum(taxRes.savings)}</strong> annually with this regime.
             </div>
           `;
-          document.getElementById('taxComparisonResult').innerHTML = tableHtml;
+          // Format AI tax-saving advice
+          let aiAdviceHtml = "";
+          if (taxRes.ai_recommendations) {
+            let formattedAdvice = taxRes.ai_recommendations
+              .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+              .replace(/\n/g, '<br/>');
+            
+            aiAdviceHtml = `
+              <div style="margin-top: 18px; padding: 16px; background: rgba(212, 168, 67, 0.05); border: 1px solid rgba(212, 168, 67, 0.15); border-radius: 12px; text-align: left;">
+                <div style="font-family:'Syne',sans-serif; font-size: 14px; font-weight: 700; color: var(--gold2); margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+                  <span>💡 AI Tax-Saving Tips</span>
+                </div>
+                <div style="font-size: 13px; line-height: 1.6; color: var(--text);">
+                  ${formattedAdvice}
+                </div>
+              </div>
+            `;
+          }
+
+          document.getElementById('taxComparisonResult').innerHTML = tableHtml + aiAdviceHtml;
 
           showResult('taxResult', `
             <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em">Tax Payable (${taxRes.recommended})</div>
