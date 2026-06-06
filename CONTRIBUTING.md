@@ -4,6 +4,8 @@ Thank you for your interest in contributing! This guide walks you through everyt
 
 ---
 
+<!-- test content, delete later -->
+
 ## 📋 Table of Contents
 
 1. [Code of Conduct](#code-of-conduct)
@@ -30,11 +32,11 @@ By participating in this project you agree to abide by our [Code of Conduct](COD
 
 ### Prerequisites
 
-| Tool | Version |
-|------|---------|
-| Python | ≥ 3.10 |
-| pip | latest |
-| Git | ≥ 2.30 |
+| Tool   | Version |
+| ------ | ------- |
+| Python | ≥ 3.10  |
+| pip    | latest  |
+| Git    | ≥ 2.30  |
 
 ### Fork & Clone
 
@@ -126,14 +128,14 @@ git checkout -b <type>/<short-description>
 
 ### Branch naming examples
 
-| Type | Branch Name |
-|------|-------------|
-| Bug fix | `fix/navbar-mobile-overflow` |
-| New feature | `feat/export-report-pdf` |
-| Documentation | `docs/improve-setup-guide` |
-| CI / Workflow | `ci/add-dependency-audit` |
-| Refactor | `refactor/extract-chart-component` |
-| Accessibility | `accessibility/add-aria-labels` |
+| Type          | Branch Name                        |
+| ------------- | ---------------------------------- |
+| Bug fix       | `fix/navbar-mobile-overflow`       |
+| New feature   | `feat/export-report-pdf`           |
+| Documentation | `docs/improve-setup-guide`         |
+| CI / Workflow | `ci/add-dependency-audit`          |
+| Refactor      | `refactor/extract-chart-component` |
+| Accessibility | `accessibility/add-aria-labels`    |
 
 ---
 
@@ -195,21 +197,22 @@ After setup, any commit that doesn't follow the convention will be rejected.
 
 ### Allowed types
 
-| Type | Use for |
-|------|---------|
-| `feat` | New feature or capability |
-| `fix` | Bug fix |
-| `docs` | Documentation only |
+| Type       | Use for                                     |
+| ---------- | ------------------------------------------- |
+| `feat`     | New feature or capability                   |
+| `fix`      | Bug fix                                     |
+| `docs`     | Documentation only                          |
 | `refactor` | Code restructuring without behaviour change |
-| `test` | Adding or updating tests |
-| `ci` | CI workflow changes |
-| `style` | Formatting / whitespace (no logic change) |
-| `perf` | Performance improvements |
-| `chore` | Dependency updates, housekeeping |
+| `test`     | Adding or updating tests                    |
+| `ci`       | CI workflow changes                         |
+| `style`    | Formatting / whitespace (no logic change)   |
+| `perf`     | Performance improvements                    |
+| `chore`    | Dependency updates, housekeeping            |
 
 ### ✅ Good examples (all valid)
 
 One-liner (most common):
+
 ```
 fix: prevent index corruption in delete-item endpoint
 feat: add /health liveness probe for deployment environments
@@ -219,6 +222,7 @@ chore: update groq dependency to 1.5.0
 ```
 
 With body (for context):
+
 ```
 fix: prevent index corruption in delete-item endpoint
 
@@ -267,6 +271,7 @@ Updated the thing
 ## Issue Reporting
 
 Before opening an issue, please:
+
 1. Search existing [open and closed issues](https://github.com/omroy07/AI-Money-Mentor/issues) to avoid duplicates.
 2. Use the appropriate **issue template** (bug report / feature request / documentation).
 3. Provide as much context as possible — stack traces, reproduction steps, OS, Python version.
@@ -276,22 +281,25 @@ Before opening an issue, please:
 ## Coding Standards
 
 ### Python
+
 - PEP 8 style (enforced by `flake8` in CI — max line length: 127)
 - Type hints encouraged but not mandatory
 - Docstrings on all public functions (`"""Short summary.\n\nLonger detail."""`)
 - No bare `except:` — always catch specific exception types
 
 ### JavaScript / HTML
+
 - Vanilla JS (no jQuery or frameworks in the frontend)
 - Use `const` / `let`; avoid `var`
 - Keep functions small and single-purpose
 - Use semantic HTML5 elements (`<main>`, `<nav>`, `<section>`, etc.)
 
 ### Security
+
 - **Never** hardcode credentials, API keys, or tokens in source code
 - Always use environment variables (see `.env.example`)
 - Sanitize all user inputs before processing
 
 ---
 
-*Questions? Open a [Discussion](https://github.com/omroy07/AI-Money-Mentor/discussions) or drop a comment on the relevant issue.* 🙌
+_Questions? Open a [Discussion](https://github.com/omroy07/AI-Money-Mentor/discussions) or drop a comment on the relevant issue._ 🙌
