@@ -26,12 +26,32 @@
     }
 
     body.light-theme {
-      --bg: #f4f6f9;
-      --bg2: #ffffff;
+      --bg : beige;
+      --bg2: aliceblue;
       --bg3: #e8edf3;
-      --text: #1f2937;
+      --text: #20406d;
       --muted: #6b7280;
       --border: rgba(0, 0, 0, 0.08);
+
+      .card{
+        background:ivory;
+      }
+      .stat-card{
+        background: ivory;
+      }
+      .sidebar{
+        background:beige;
+      }
+      .chat-textarea {
+        background:rgb(245, 245, 210);
+      }
+      .msg.bot {
+        background:rgb(245, 245, 210);
+      }
+      input,
+      select {
+        background: rgb(244,244,208);
+      }
     }
 
     * {
@@ -41,7 +61,7 @@
     }
 
     body {
-      font-family: 'Instrument Sans', sans-serif;
+      font-family: 'Instrument Sans', sans-serif;  /* change */
       background: var(--bg);
       color: var(--text);
       min-height: 100vh;
@@ -92,7 +112,7 @@
       border-radius: 8px;
       cursor: pointer;
       color: var(--muted);
-      font-size: 13px;
+      font-size: 18px;
       transition: all 0.18s ease;
     }
 
@@ -107,7 +127,7 @@
     }
 
     .nav-item .icon {
-      font-size: 16px;
+      font-size: 20px;
       width: 24px;
     }
 
@@ -160,7 +180,7 @@
       font-weight: 700;
       letter-spacing: 0.08em;
       text-transform: uppercase;
-      color: var(--muted);
+      color: var(--muted); 
       margin-bottom: 16px;
     }
 
@@ -172,7 +192,9 @@
     }
 
     .stat-card {
-      background: rgba(15, 22, 38, 0.96);
+      background: rgba(15, 22, 38, 0.96);  
+      
+      
       border: 1px solid var(--border);
       border-radius: 18px;
       padding: 18px;
@@ -187,7 +209,8 @@
       left: 0;
       right: 0;
       height: 3px;
-      background: linear-gradient(90deg, var(--gold), var(--teal));
+      background: linear-gradient(90deg, var(--gold), var(--teal)); 
+      
     }
 
     .stat-label {
@@ -198,7 +221,7 @@
     }
 
     .stat-val {
-      font-family: 'Syne', sans-serif;
+      font-family:'Times New Roman', Times, serif;
       font-size: 24px;
       font-weight: 800;
       margin: 6px 0 4px;
@@ -241,7 +264,8 @@
     select {
       width: 100%;
       padding: 10px 14px;
-      background: rgba(17, 26, 46, 0.9);
+      background: rgba(17, 26, 46, 0.9); 
+      
       border: 1px solid var(--border);
       border-radius: 12px;
       color: var(--text);
@@ -316,6 +340,7 @@
 
     .msg.bot {
       background: rgba(16, 24, 41, 0.94);
+      
       border: 1px solid var(--border);
       align-self: flex-start;
     }
@@ -335,7 +360,7 @@
       border-radius: 14px;
       color: var(--text);
       font-family: inherit;
-      font-size: 13px;
+      font-size: 15px;
     }
 
     /* Portfolio specific */
@@ -385,6 +410,8 @@
         left: 0;
       }
     }
+
+
   </style>
 </head>
 
