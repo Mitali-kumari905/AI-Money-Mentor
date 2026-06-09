@@ -48,6 +48,14 @@
       showResult('scoreResult', '⚠ Please fill in all fields.');
       return;
     }
+    if (income, expenses, savings, invest, debt, emergency).some(val=>val<0){
+      showResult('scoreResult','Inputs cannot be negative.');
+      return;
+    }
+    if (expenses>=income && savings>0){
+      showResult('scoreResult','Savings cannot be there when expenses equal or exceed income.');
+      return;
+    }
 
     setLoading('scoreBtn', true);
     try {
