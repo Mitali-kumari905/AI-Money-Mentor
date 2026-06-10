@@ -41,7 +41,24 @@
     }
     const d = document.createElement('div');
     d.className = `msg ${role}`;
-    d.innerHTML = `<div class="sender">${role === 'user' ? 'You' : 'AI Advisor'}</div>${text}`;
+
+    let content;
+
+    if (role === 'bot') {
+        content = DOMPurify.sanitize(
+            marked.parse(text || '')
+        );
+    } else {
+        content = text;
+    }
+
+    d.innerHTML = `
+        <div class="sender">
+            ${role === 'user' ? 'You' : 'AI Advisor'}
+        </div>
+        ${content}
+    `;
+
     box.appendChild(d);
     box.scrollTop = box.scrollHeight;
   }
