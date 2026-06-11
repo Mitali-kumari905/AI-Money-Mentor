@@ -29,7 +29,7 @@ from utils.money_score import calculate_money_score
 from utils.multi_agent import run_multi_agent
 from utils.stock import get_stock_price
 from utils.expense_track import calculate_expense, insights
-from utils.validation import ValidationError, validate_string, validate_float, validate_int
+from utils.validation import ValidationError, validate_string, validate_float, validate_int, validate_history
 
 app = Flask(__name__)
 
@@ -173,9 +173,7 @@ def chat():
         if not isinstance(data, dict):
             raise ValidationError("Request body must be a JSON object")
         msg = validate_string(data.get("message"), "message")
-        history = data.get("history", [])
-        if not isinstance(history, list):
-            raise ValidationError("'history' must be a list")
+        history = validate_history(data.get("history"))
 
         # Build messages: system prompt + last 10 history turns + current message
         system_prompt = (
