@@ -34,7 +34,19 @@ from utils.validation import ValidationError, validate_string, validate_float, v
 app = Flask(__name__)
 
 # ---------------- INIT DATABASE ----------------
-from models import db, Expense, Asset, Liability, BudgetLimit, BudgetAlert, PriceAlert, FinancialGoal
+from models import (
+    db,
+    Expense,
+    Asset,
+    Liability,
+    BudgetLimit,
+    BudgetAlert,
+    PriceAlert,
+    FinancialGoal,
+    FinancialGoalMilestone,
+)
+
+
 
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///money_mentor.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
@@ -710,6 +722,85 @@ def delete_budget_limit(limit_id):
 
 
 # ---------------- FINANCIAL GOALS TRACKER ----------------
+def _months_diff(start_dt, end_dt):
+    return (end_dt.year - start_dt.year) * 12 + (end_dt.month - start_dt.month)
+
+
+def _ym_add_months(base_dt, months):
+    # base_dt is a datetime; normalize to first day
+    year = base_dt.year + (base_dt.month - 1 + months) // 12
+    month = (base_dt.month - 1 + months) % 12 + 1
+    return year, month
+
+
+def compute_monthly_milestones(goal):
+    """Compute milestones as an even split across months until goal.target_date.
+
+    Returns list of dicts: [{month, target_amount_for_month, status}]
+    """
+    from datetime import datetime
+
+    remaining = float(goal.target_amount) - float(goal.current_amount)
+    # If already reached/exceeded, all milestones become 0 and marked completed.
+    if remaining <= 0:
+        target_dt = datetime.strptime(goal.target_date, "%Y-%m")
+        now = datetime.now()
+        months_remaining = _months_diff(datetime(now.year, now.month, 1), datetime(target_dt.year, target_dt.month, 1))
+        if months_remaining < 0:
+            months_remaining = 0
+        if months_remaining == 0:
+            months_remaining = 1
+
+        milestones = []
+        for i in range(months_remaining):
+            y, m = _ym_add_months(datetime(now.year, now.month, 1), i)
+            milestones.append({
+                "month": f"{y:04d}-{m:02d}",
+                "target_amount_for_month": 0.0,
+                "status": "completed",
+            })
+        return milestones
+
+    target_dt = datetime.strptime(goal.target_date, "%Y-%m")
+    now = datetime.now()
+
+    start = datetime(now.year, now.month, 1)
+    end = datetime(target_dt.year, target_dt.month, 1)
+    months_remaining = _months_diff(start, end)
+    if months_remaining <= 0:
+        months_remaining = 1
+
+    # Even split with rounding correction on the last month.
+    base = remaining / months_remaining
+    amounts = [round(base, 2) for _ in range(months_remaining)]
+    total_alloc = round(sum(amounts), 2)
+    diff = round(remaining - total_alloc, 2)
+    amounts[-1] = round(amounts[-1] + diff, 2)
+
+    milestones = []
+    for i in range(months_remaining):
+        y, m = _ym_add_months(start, i)
+        milestones.append({
+            "month": f"{y:04d}-{m:02d}",
+            "target_amount_for_month": float(amounts[i]),
+            "status": "planned",
+        })
+
+    return milestones
+
+
+def persist_goal_milestones(goal, milestones):
+    FinancialGoalMilestone.query.filter_by(goal_id=goal.id).delete(synchronize_session=False)
+    for ms in milestones:
+        db.session.add(FinancialGoalMilestone(
+            goal_id=goal.id,
+            month=ms["month"],
+            target_amount_for_month=ms["target_amount_for_month"],
+            status=ms["status"],
+        ))
+    db.session.commit()
+
+
 @app.route("/goals", methods=["GET", "POST"])
 def goals():
     if request.method == "GET":
@@ -731,11 +822,16 @@ def goals():
         )
         db.session.add(goal)
         db.session.commit()
+
+        milestones = compute_monthly_milestones(goal)
+        persist_goal_milestones(goal, milestones)
+
         return jsonify({"status": "success", "goal": goal.to_dict()})
     except ValidationError as e:
         raise e
     except Exception as e:
         return jsonify({"error": str(e)}), 400
+
 
 
 @app.route("/goals/<int:goal_id>", methods=["PUT", "DELETE"])
@@ -746,6 +842,8 @@ def goal_detail(goal_id):
             return jsonify({"error": "Goal not found"}), 404
 
         if request.method == "DELETE":
+            # Delete milestones first
+            FinancialGoalMilestone.query.filter_by(goal_id=goal.id).delete(synchronize_session=False)
             db.session.delete(goal)
             db.session.commit()
             return jsonify({"status": "success"})
@@ -762,11 +860,16 @@ def goal_detail(goal_id):
             if "target_date" in data:
                 goal.target_date = validate_string(data["target_date"], "target_date")
             db.session.commit()
+
+            milestones = compute_monthly_milestones(goal)
+            persist_goal_milestones(goal, milestones)
+
             return jsonify({"status": "success", "goal": goal.to_dict()})
     except ValidationError as e:
         raise e
     except Exception as e:
         return jsonify({"error": str(e)}), 400
+
 
 
 @app.route("/api/goals", methods=["GET"])
