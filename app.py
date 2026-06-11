@@ -117,6 +117,7 @@ def login():
     return jsonify({"error": "Invalid username or password."}), 401
 
 @app.route("/logout", methods=["POST"])
+@login_required
 def logout():
     logout_user()
     return jsonify({"status": "success"})
