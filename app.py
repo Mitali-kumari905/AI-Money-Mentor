@@ -479,8 +479,8 @@ def tax_simulate():
         )
 
         # Deterministic explanation always available
-        best_regime_a = result["best_regime"]["scenario_a"]
-        best_regime_b = result["best_regime"]["scenario_b"]
+        best_regime_a = result["comparison"]["best_regime"]["scenario_a"]
+        best_regime_b = result["comparison"]["best_regime"]["scenario_b"]
         switch_savings_new = float(result["comparison"]["switch"]["new_regime"]["savings"])
         switch_savings_old = float(result["comparison"]["switch"]["old_regime"]["savings"])
 
@@ -494,8 +494,7 @@ def tax_simulate():
 
         # Build deterministic lever explanation from sensitivity rankings for the best regime of scenario B
         scenario_b_best = best_regime_b
-        sens_for_scenario_b = result["sensitivity"]["scenario_b"]["new_regime"] if scenario_b_best == "New Regime" else result["sensitivity"]["scenario_b"]["old_regime"]
-        lever_ranking = result["sensitivity"]["scenario_b"]["new_regime"]["lever_ranking_for_best_regime"] if scenario_b_best == "New Regime" else result["sensitivity"]["scenario_b"]["old_regime"]["lever_ranking_for_best_regime"]
+        lever_ranking = result["sensitivity"]["scenario_b"]["lever_ranking_for_best_regime"]
 
         deterministic_explanation = (
             f"Regime outcome: Scenario A is better under {best_regime_a}, while Scenario B is better under {best_regime_b}. "
