@@ -81,9 +81,26 @@
     if (welcome && !welcome.classList.contains('hidden')) {
       welcome.classList.add('hidden');
     }
-    var d = document.createElement('div');
-    d.className = 'msg ' + role;
-    d.innerHTML = '<div class="sender">' + (role === 'user' ? 'You' : 'AI Advisor') + '</div>' + text;
+    const d = document.createElement('div');
+    d.className = `msg ${role}`;
+
+    let content;
+
+    if (role === 'bot') {
+        content = DOMPurify.sanitize(
+            marked.parse(text || '')
+        );
+    } else {
+        content = text;
+    }
+
+    d.innerHTML = `
+        <div class="sender">
+            ${role === 'user' ? 'You' : 'AI Advisor'}
+        </div>
+        ${content}
+    `;
+
     box.appendChild(d);
     box.scrollTop = box.scrollHeight;
   }

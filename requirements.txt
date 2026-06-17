@@ -6,3 +6,5 @@ python-dotenv==1.2.2
 flask-sqlalchemy==3.1.1
 apscheduler==3.11.2
 fpdf2==2.8.7
+flask-login
+werkzeug

@@ -6,6 +6,8 @@
   <title>AI Money Mentor - {% block title %}{% endblock %}</title>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>  <!-- For Markdown parsing in AI responses -->
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.8/dist/purify.min.js"></script> <!-- For sanitizing AI responses -->
   <link rel="stylesheet" href="{{ url_for('static', filename='styles/main.css') }}">
   {% block head %}{% endblock %}
 </head>
