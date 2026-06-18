@@ -6,6 +6,8 @@
   <title>AI Money Mentor - {% block title %}{% endblock %}</title>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>  <!-- For Markdown parsing in AI responses -->
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.8/dist/purify.min.js"></script> <!-- For sanitizing AI responses -->
   <link rel="stylesheet" href="{{ url_for('static', filename='styles/main.css') }}">
   {% block head %}{% endblock %}
 </head>
@@ -14,15 +16,18 @@
   <div class="menu-overlay"></div>
 
   <!-- Mobile Top Navigation Header -->
-  <div class="mobile-header">
-    <button class="menu-toggle-btn" onclick="toggleMobileMenu()">☰</button>
+  <div class="mobile-header" style="justify-content: space-between;">
     <div class="mobile-logo">₹ Money Mentor</div>
+    <button class="theme-toggle-btn theme-toggle-mobile" onclick="toggleTheme()" style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 50%; width: 48px; height: 48px; display: flex; flex-direction: column; justify-content: center; align-items: center; color: var(--text); cursor: pointer; padding: 0;">
+      <span class="icon" style="font-size: 16px; line-height: 1;">☀️</span>
+      <span class="text" style="font-size: 9px; margin-top: 2px;">Light Mode</span>
+    </button>
   </div>
 
   <!-- ══════════ SIDEBAR ══════════ -->
   <div class="sidebar">
     <div class="logo">₹ Money Mentor</div>
-    <button class="btn btn-ghost" id="themeToggle" onclick="toggleTheme()" style="margin-bottom:15px;width:100%;">
+    <button class="btn btn-ghost theme-toggle-btn" onclick="toggleTheme()" style="margin-bottom:15px;width:100%;">
       ☀️ Light Mode
     </button>
 
@@ -55,23 +60,23 @@
     // Theme Toggle State Persistence
     function toggleTheme() {
       document.body.classList.toggle("light-theme");
-      const btn = document.getElementById("themeToggle");
+      const btns = document.querySelectorAll(".theme-toggle-btn");
       if (document.body.classList.contains("light-theme")) {
         localStorage.setItem("theme", "light");
-        if (btn) btn.innerHTML = "🌙 Dark Mode";
+        btns.forEach(btn => btn.innerHTML = "🌙 Dark Mode");
       } else {
         localStorage.setItem("theme", "dark");
-        if (btn) btn.innerHTML = "☀️ Light Mode";
+        btns.forEach(btn => btn.innerHTML = "☀️ Light Mode");
       }
     }
 
     // Apply saved theme immediately
     (function () {
       const savedTheme = localStorage.getItem("theme");
-      const btn = document.getElementById("themeToggle");
+      const btns = document.querySelectorAll(".theme-toggle-btn");
       if (savedTheme === "light") {
         document.body.classList.add("light-theme");
-        if (btn) btn.innerHTML = "🌙 Dark Mode";
+        btns.forEach(btn => btn.innerHTML = "🌙 Dark Mode");
       }
     })();
 
@@ -88,20 +93,9 @@
     // Mobile Menu Toggle
     function toggleMobileMenu() {
       const sidebar = document.querySelector('.sidebar');
-      const overlay = document.querySelector('.menu-overlay');
-      if (sidebar && overlay) {
+      if (sidebar) {
         sidebar.classList.toggle('open');
-        overlay.classList.toggle('active');
       }
-    }
-
-    const overlay = document.querySelector('.menu-overlay');
-    if (overlay) {
-      overlay.addEventListener('click', () => {
-        const sidebar = document.querySelector('.sidebar');
-        if (sidebar) sidebar.classList.remove('open');
-        overlay.classList.remove('active');
-      });
     }
 
     // Common helpers
@@ -135,6 +129,55 @@
       }
       const res = await fetch(url, opts);
       return res.json();
+    }
+
+    // ---- Financial report export (merges results across pages via localStorage) ----
+    const FINANCIAL_REPORT_KEY = 'financialReportData';
+
+    function updateReportData(partial) {
+      let data = {};
+      try {
+        data = JSON.parse(localStorage.getItem(FINANCIAL_REPORT_KEY)) || {};
+      } catch (e) {}
+      Object.assign(data, partial);
+      localStorage.setItem(FINANCIAL_REPORT_KEY, JSON.stringify(data));
+      return data;
+    }
+
+    function getReportData() {
+      try {
+        return JSON.parse(localStorage.getItem(FINANCIAL_REPORT_KEY)) || {};
+      } catch (e) {
+        return {};
+      }
+    }
+
+    function showExportSection() {
+      const el = document.getElementById('export-section');
+      if (el) el.style.display = 'flex';
+    }
+
+    async function exportReport(format) {
+      try {
+        const response = await fetch(`/export/${format}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(getReportData())
+        });
+        if (!response.ok) throw new Error('Export failed');
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `financial_report.${format}`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+      } catch (e) {
+        alert('⚠ Could not export report. Please try again.');
+      }
     }
   </script>
   {% block scripts %}{% endblock %}

@@ -12,6 +12,28 @@
     </div>
   </div>
 
+  <div class="stats-grid">
+    <div class="stat-card">
+      <h3>Net Worth</h3>
+      <span id="netWorth">₹0</span>
+    </div>
+
+    <div class="stat-card">
+      <h3>Expenses</h3>
+      <span id="monthlyExpenses">₹0</span>
+    </div>
+
+    <div class="stat-card">
+      <h3>Goals</h3>
+      <span id="goalCount">0</span>
+    </div>
+
+    <div class="stat-card">
+      <h3>Budget Alerts</h3>
+      <span id="alertCount">0</span>
+    </div>
+  </div>
+
   <div class="dash-grid">
     <!-- LEFT SIDE: QUICK ADVISORY -->
     <div style="display:flex;flex-direction:column;gap:20px">
@@ -108,23 +130,39 @@
       </div>
     </div>
 
-    <!-- COMPLIANCE -->
     <div class="card">
-      <div class="card-title">🔒 Compliance</div>
-      <div style="display:flex;flex-direction:column;gap:7px;margin-bottom:14px">
-        <div style="font-size:13px"><span class="badge badge-green">✔ OK</span> &nbsp; Data Encryption</div>
-        <div style="font-size:13px"><span class="badge badge-green">✔ OK</span> &nbsp; Audit Logs</div>
-        <div style="font-size:13px"><span class="badge badge-red">⚠ Pending</span> &nbsp; Regulatory Check</div>
-        <div style="font-size:13px"><span class="badge badge-green">✔ OK</span> &nbsp; KYC Verified</div>
-      </div>
-      <button class="btn btn-ghost" onclick="window.location.href='/pdf-parser'" style="width:100%">📄 Upload Form 16</button>
+    <div class="card-title">🕒 Recent Activity</div>
+
+    <div id="recentActivity">
+        Loading...
     </div>
+</div>
   </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
+  window.addEventListener("DOMContentLoaded", async () => {
+    const data = await apiFetch("/dashboard-data");
+
+    document.getElementById("netWorth").textContent =
+        formatCurrency(data.net_worth);
+
+    document.getElementById("goalCount").textContent =
+        data.goal_count;
+
+    document.getElementById("alertCount").textContent =
+        data.alert_count;
+    
+    document.getElementById("monthlyExpenses").textContent =
+        formatCurrency(data.monthly_expenses);
+
+    initPortfolioChart();
+    updateSIP();
+    loadRecentActivity();
+    
+  });
   let portfolioChartInstance = null;
 
   function initPortfolioChart() {
@@ -152,6 +190,28 @@
     });
   }
 
+  async function loadRecentActivity() {
+    try {
+        const data = await apiFetch('/dashboard/recent-activity');
+
+        const container = document.getElementById('recentActivity');
+
+        if (!data.length) {
+            container.innerHTML = '<p>No activity yet</p>';
+            return;
+        }
+
+        container.innerHTML = data.map(item => `
+            <div style="padding:8px 0;border-bottom:1px solid rgba(255,255,255,.08)">
+                ${item.message}
+            </div>
+        `).join('');
+    } catch (err) {
+        document.getElementById('recentActivity').innerHTML =
+            '<p>Unable to load activity</p>';
+    }
+  }
+
   function updateSIP() {
     const m = +document.getElementById('sipAmt').value;
     const y = +document.getElementById('sipYrs').value;
@@ -175,7 +235,24 @@
     }
     const d = document.createElement('div');
     d.className = `msg ${role}`;
-    d.innerHTML = `<div class="sender">${role === 'user' ? 'You' : 'AI Advisor'}</div>${text}`;
+
+    let content;
+
+    if (role === 'bot') {
+        content = DOMPurify.sanitize(
+            marked.parse(text || '')
+        );
+    } else {
+        content = text;
+    }
+
+    d.innerHTML = `
+        <div class="sender">
+            ${role === 'user' ? 'You' : 'AI Advisor'}
+        </div>
+        ${content}
+    `;
+
     box.appendChild(d);
     box.scrollTop = box.scrollHeight;
   }
