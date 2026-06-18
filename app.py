@@ -1,6 +1,6 @@
 
+import re
 from flask import Flask, request, jsonify, render_template
-from flask_mail import Mail, Message
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from datetime import datetime, timedelta
@@ -56,14 +56,14 @@ from utils.tax import calculate_tax
 from utils.pdf_parser import extract_income
 from utils.money_score import calculate_money_score
 from utils.multi_agent import run_multi_agent
-from utils.stock import get_stock_price
+from utils.stock import get_stock_price, get_stock_dividends
 from utils.expense_track import calculate_expense, insights
 from utils.validation import ValidationError, validate_string, validate_float, validate_int, validate_history
 
 app = Flask(__name__)
 
 # ---------------- INIT DATABASE ----------------
-from models import db, Expense, Asset, Liability, BudgetLimit, BudgetAlert, PriceAlert, FinancialGoal, RecurringExpense
+from models import db, Expense, Asset, Liability, BudgetLimit, BudgetAlert, PriceAlert, PriceAlertEvent, FinancialGoal, RecurringExpense, Portfolio
 
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///money_mentor.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
@@ -1114,107 +1114,6 @@ def _get_period_key(frequency: str, d):
 
 
 @app.route("/recurring-expense", methods=["POST"])
-def create_recurring_expense():
-    """
-    Create a recurring expense template.
-    """
-    try:
-        data = request.json or {}
-        if not isinstance(data, dict):
-            raise ValidationError("Request body must be a JSON object")
-
-        category = validate_string(data.get("category"), "category")
-        amount = validate_float(data.get("amount"), "amount", min_val=0.01)
-        start_date = validate_string(data.get("start_date"), "start_date")  # YYYY-MM-DD
-        frequency = _validate_frequency(data.get("frequency"))
-
-        active = data.get("active", True)
-        if not isinstance(active, bool):
-            raise ValidationError("active must be a boolean")
-
-        end_date = data.get("end_date", None)
-        if end_date is not None:
-            end_date = validate_string(end_date, "end_date")  # YYYY-MM-DD
-
-        # Validate date format (YYYY-MM-DD)
-        import datetime
-        try:
-            start_dt = datetime.datetime.strptime(start_date, "%Y-%m-%d").date()
-        except Exception:
-            raise ValidationError("start_date must be in YYYY-MM-DD format")
-
-        if end_date:
-            try:
-                end_dt = datetime.datetime.strptime(end_date, "%Y-%m-%d").date()
-            except Exception:
-                raise ValidationError("end_date must be in YYYY-MM-DD format")
-            if end_dt < start_dt:
-                raise ValidationError("end_date cannot be before start_date")
-
-        rexp = RecurringExpense(
-            category=category,
-            amount=amount,
-            start_date=start_date,
-            frequency=frequency,
-            active=active,
-            end_date=end_date,
-        )
-        db.session.add(rexp)
-        db.session.commit()
-        return jsonify(rexp.to_dict()), 201
-
-    except ValidationError as e:
-        raise e
-    except Exception as e:
-        return jsonify({"error": str(e)}), 400
-
-
-@app.route("/recurring-expense", methods=["GET"])
-def list_recurring_expenses():
-    try:
-        items = RecurringExpense.query.order_by(RecurringExpense.id.desc()).all()
-        return jsonify([i.to_dict() for i in items])
-    except Exception as e:
-        return jsonify({"error": str(e)}), 400
-
-
-@app.route("/recurring-expense/<int:recurring_id>", methods=["DELETE"])
-def disable_recurring_expense(recurring_id):
-    """
-    Disable a recurring expense template.
-    """
-    try:
-        item = db.session.get(RecurringExpense, recurring_id)
-        if not item:
-            return jsonify({"error": "Recurring expense not found"}), 404
-        item.active = False
-        db.session.commit()
-        return jsonify({"status": "success", "id": recurring_id})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 400
-
-# ---------------- NET WORTH TRACKER ----------------
-# Net Worth Tracker Features
-
-# ---------------- RECURRING EXPENSES ----------------
-def _validate_frequency(freq: str):
-    freq = (freq or "").strip().lower()
-    if freq not in ("monthly", "weekly", "yearly"):
-        raise ValidationError("frequency must be one of: monthly, weekly, yearly")
-    return freq
-
-
-def _get_period_key(frequency: str, d):
-    if frequency == "monthly":
-        return d.strftime("%Y-%m")
-    if frequency == "weekly":
-        iso_year, iso_week, _ = d.isocalendar()
-        return f"{iso_year}-W{iso_week:02d}"
-    # yearly
-    return d.strftime("%Y")
-
-
-@app.route("/recurring-expense", methods=["POST"])
 @login_required
 def create_recurring_expense():
     """
@@ -1372,19 +1271,10 @@ def add_liability():
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
-@app.route("/delete-item", methods=["DELETE"])
+@app.route("/delete-item", methods=["POST", "DELETE"])
 @login_required
 def delete_item():
     try:
-
-        data = request.json
-        item_type = data["type"]
-        item_id = int(data["id"])
-
-        if item_type == 'asset':
-            rows = Asset.query.order_by(Asset.id).all()
-            db.session.delete(rows[item_id])
-
         data = request.json or {}
         if not isinstance(data, dict):
             raise ValidationError("Request body must be a JSON object")
@@ -1925,6 +1815,204 @@ def check_all_recurring_expenses_job():
             db.session.add(exp)
 
         db.session.commit()
+
+
+# ---------------- PORTFOLIO TRACKER ----------------
+
+@app.route("/portfolio-page")
+@login_required
+def portfolio_page():
+    return render_template("portfolio.html", active_page="portfolio")
+
+
+@app.route("/portfolio/list", methods=["GET"])
+@login_required
+def list_portfolio():
+    try:
+        holdings = Portfolio.query.filter_by(user_id=current_user.id).all()
+        
+        today_dt = datetime.now()
+        cutoff_dt = today_dt - timedelta(days=365)
+        
+        holdings_list = []
+        total_invested = 0.0
+        total_current = 0.0
+        total_dividends_received = 0.0
+        
+        total_annual_dividends_value = 0.0
+        
+        timeline = []
+        
+        for h in holdings:
+            price_data = get_stock_price(h.symbol)
+            current_price = price_data.get("price", h.buy_price)
+            
+            divs = get_stock_dividends(h.symbol)
+            
+            # 1. Calculate dividends received: payment date >= buy date
+            divs_received = 0.0
+            for d in divs:
+                if d["date"] >= h.buy_date:
+                    divs_received += d["amount"] * h.quantity
+            
+            # 2. Calculate annual dividend per share: in last 365 days
+            annual_div_per_share = 0.0
+            for d in divs:
+                try:
+                    div_date = datetime.strptime(d["date"], "%Y-%m-%d")
+                    if cutoff_dt <= div_date <= today_dt:
+                        annual_div_per_share += d["amount"]
+                except ValueError:
+                    continue
+            
+            # 3. Calculate holding metrics
+            invested_val = h.quantity * h.buy_price
+            current_val = h.quantity * current_price
+            pnl = current_val - invested_val
+            pnl_percent = (pnl / invested_val * 100) if invested_val > 0 else 0.0
+            yoc = (annual_div_per_share / h.buy_price * 100) if h.buy_price > 0 else 0.0
+            
+            holdings_list.append({
+                "id": h.id,
+                "symbol": h.symbol,
+                "name": h.name,
+                "quantity": h.quantity,
+                "buy_price": h.buy_price,
+                "current_price": current_price,
+                "invested_value": round(invested_val, 2),
+                "current_value": round(current_val, 2),
+                "pnl": round(pnl, 2),
+                "pnl_percent": round(pnl_percent, 2),
+                "dividends_received": round(divs_received, 2),
+                "annual_dividend_per_share": round(annual_div_per_share, 2),
+                "yoc": round(yoc, 2)
+            })
+            
+            total_invested += invested_val
+            total_current += current_val
+            total_dividends_received += divs_received
+            total_annual_dividends_value += annual_div_per_share * h.quantity
+            
+            # 4. Project upcoming payouts:
+            for d in divs:
+                try:
+                    div_date = datetime.strptime(d["date"], "%Y-%m-%d")
+                    if cutoff_dt <= div_date <= today_dt:
+                        projected_date = div_date + timedelta(days=365)
+                        if projected_date > today_dt:
+                            timeline.append({
+                                "date": projected_date.strftime("%Y-%m-%d"),
+                                "symbol": h.symbol,
+                                "amount_per_share": d["amount"],
+                                "amount": d["amount"] * h.quantity
+                            })
+                except ValueError:
+                    continue
+        
+        total_pnl = total_current - total_invested
+        total_pnl_percent = (total_pnl / total_invested * 100) if total_invested > 0 else 0.0
+        portfolio_yoc = (total_annual_dividends_value / total_invested * 100) if total_invested > 0 else 0.0
+        
+        # Sort timeline by date ascending
+        timeline.sort(key=lambda x: x["date"])
+        
+        summary = {
+            "total_invested": round(total_invested, 2),
+            "total_current": round(total_current, 2),
+            "total_pnl": round(total_pnl, 2),
+            "total_pnl_percent": round(total_pnl_percent, 2),
+            "total_dividends_received": round(total_dividends_received, 2),
+            "portfolio_yoc": round(portfolio_yoc, 2)
+        }
+        
+        return jsonify({
+            "success": True,
+            "holdings": holdings_list,
+            "summary": summary,
+            "timeline": timeline
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+
+@app.route("/portfolio/add", methods=["POST"])
+@login_required
+def add_portfolio_holding():
+    try:
+        data = request.json or {}
+        if not isinstance(data, dict):
+            raise ValidationError("Request body must be a JSON object")
+
+        symbol = validate_string(data.get("symbol"), "symbol").strip().upper()
+        if not symbol or not re.match(r"^[A-Z0-9.\-_]+$", symbol):
+            raise ValidationError("Invalid symbol format")
+
+        quantity = validate_float(data.get("quantity"), "quantity", min_val=0.0001)
+        buy_price = validate_float(data.get("buy_price"), "buy_price", min_val=0.01)
+        buy_date = validate_string(data.get("buy_date"), "buy_date")
+
+        try:
+            datetime.strptime(buy_date, "%Y-%m-%d")
+        except ValueError:
+            raise ValidationError("buy_date must be in YYYY-MM-DD format")
+
+        notes = data.get("notes", "")
+        if notes:
+            notes = validate_string(notes, "notes")
+
+        # Verify symbol and get long name using yfinance
+        stock = yf.Ticker(symbol)
+        name = symbol
+        try:
+            info = stock.info
+            if info:
+                name = info.get("longName") or info.get("shortName") or symbol
+        except Exception:
+            if "." not in symbol:
+                symbol_ns = symbol + ".NS"
+                try:
+                    stock_ns = yf.Ticker(symbol_ns)
+                    info = stock_ns.info
+                    if info:
+                        name = info.get("longName") or info.get("shortName") or symbol_ns
+                        symbol = symbol_ns
+                except Exception:
+                    pass
+
+        price_data = get_stock_price(symbol)
+        if "error" in price_data:
+            raise ValidationError(price_data["error"])
+
+        holding = Portfolio(
+            user_id=current_user.id,
+            symbol=symbol,
+            name=name,
+            quantity=quantity,
+            buy_price=buy_price,
+            buy_date=buy_date,
+            notes=notes
+        )
+        db.session.add(holding)
+        db.session.commit()
+        return jsonify({"success": True, "message": f"Successfully added {symbol} to portfolio"})
+    except ValidationError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+
+@app.route("/portfolio/delete/<int:item_id>", methods=["DELETE"])
+@login_required
+def delete_portfolio_holding(item_id):
+    try:
+        holding = db.session.get(Portfolio, item_id)
+        if not holding or holding.user_id != current_user.id:
+            return jsonify({"error": "Holding not found or unauthorized"}), 404
+        db.session.delete(holding)
+        db.session.commit()
+        return jsonify({"success": True, "message": "Successfully deleted holding"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
 
 
 if not app.debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true":

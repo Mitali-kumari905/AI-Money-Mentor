@@ -44,7 +44,7 @@ def create_test_app():
     def add_asset():
         data = request.json
         date_val = data.get("date") or datetime.utcnow().strftime("%Y-%m-%d")
-        a = Asset(name=data["name"], amount=float(data["amount"]), date=date_val)
+        a = Asset(name=data["name"], amount=float(data["amount"]), date=date_val, user_id=1)
         db.session.add(a)
         db.session.commit()
         return jsonify({"status": "success"})
@@ -53,7 +53,7 @@ def create_test_app():
     def add_liability():
         data = request.json
         date_val = data.get("date") or datetime.utcnow().strftime("%Y-%m-%d")
-        l = Liability(name=data["name"], amount=float(data["amount"]), date=date_val)
+        l = Liability(name=data["name"], amount=float(data["amount"]), date=date_val, user_id=1)
         db.session.add(l)
         db.session.commit()
         return jsonify({"status": "success"})
