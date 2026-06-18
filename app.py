@@ -62,129 +62,8 @@ from utils.validation import ValidationError, validate_string, validate_float, v
 
 app = Flask(__name__)
 
-# ============================================
-# EMAIL CONFIGURATION
-# ============================================
-app.config['MAIL_SERVER'] = 'smtp.gmail.com'
-app.config['MAIL_PORT'] = 587
-app.config['MAIL_USE_TLS'] = True
-app.config['MAIL_USERNAME'] = os.getenv('EMAIL_USER', 'your-email@gmail.com')  # Change this
-app.config['MAIL_PASSWORD'] = os.getenv('EMAIL_PASS', 'your-app-password')     # Change this
-app.config['MAIL_DEFAULT_SENDER'] = os.getenv('EMAIL_USER', 'your-email@gmail.com')
-
-mail = Mail(app)
-
-# ============================================
-# DATABASE FUNCTIONS FOR EMAIL SETTINGS
-# ============================================
-def init_email_db():
-    """Create email settings table if not exists"""
-    conn = sqlite3.connect('database.db')
-    c = conn.cursor()
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS user_settings (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            email VARCHAR(120) UNIQUE,
-            weekly_email_enabled BOOLEAN DEFAULT 1,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-    conn.commit()
-    conn.close()
-
-def get_user_email_settings():
-    """Get all users with email enabled"""
-    conn = sqlite3.connect('database.db')
-    c = conn.cursor()
-    c.execute('SELECT email FROM user_settings WHERE weekly_email_enabled = 1')
-    users = c.fetchall()
-    conn.close()
-    return [user[0] for user in users]
-
-# Initialize email database
-init_email_db()
-
-# ============================================
-# WEEKLY REPORT GENERATOR
-# ============================================
-def generate_weekly_report(user_email):
-    """Generate weekly financial report for a user"""
-    # For now, return sample data
-    # In production, fetch from database
-    return {
-        'date': datetime.now().strftime('%B %d, %Y'),
-        'total_spend': '₹12,450',
-        'spend_change': '+5.2',
-        'spend_change_class': 'positive' if 5.2 > 0 else 'negative',
-        'net_worth': '₹4,28,500',
-        'net_worth_change': '+2.1',
-        'budget_health': '85%',
-        'budget_health_class': 'positive' if 85 > 70 else 'negative',
-        'budget_health_text': 'On Track ✅' if 85 > 70 else 'Over Budget ⚠️',
-        'top_category': 'Food',
-        'top_category_amount': '₹4,200',
-        'top_categories': {
-            'Food': '₹4,200',
-            'Transport': '₹2,800',
-            'Shopping': '₹1,900',
-            'Entertainment': '₹1,500'
-        },
-        'ai_insight': 'You spent 40% more on dining out this week. Try cooking 2 extra meals at home to save ₹600.',
-        'dashboard_url': 'http://localhost:5000/dashboard',
-        'opt_out_url': 'http://localhost:5000/settings'
-    }
-
-def send_weekly_email(user_email):
-    """Send weekly report email to a user"""
-    try:
-        report_data = generate_weekly_report(user_email)
-        
-        msg = Message(
-            subject=f"📊 Weekly Financial Digest - {datetime.now().strftime('%B %d, %Y')}",
-            recipients=[user_email],
-            html=render_template('weekly_report.html', **report_data)
-        )
-        mail.send(msg)
-        print(f"✅ Email sent to {user_email}")
-        return True
-    except Exception as e:
-        print(f"❌ Failed to send email to {user_email}: {e}")
-        return False
-
-def send_weekly_reports():
-    """Send weekly reports to all users"""
-    print("🔄 Running weekly email job...")
-    users = get_user_email_settings()
-    
-    if not users:
-        print("📭 No users subscribed to weekly emails")
-        return
-    
-    success = 0
-    for user_email in users:
-        if send_weekly_email(user_email):
-            success += 1
-    
-    print(f"✅ Sent {success}/{len(users)} weekly reports")
-
-# ============================================
-# SCHEDULER - Runs every Monday at 9:00 AM
-# ============================================
-scheduler = BackgroundScheduler()
-
-scheduler.add_job(
-    func=send_weekly_reports,
-    trigger=CronTrigger(day_of_week='mon', hour=9, minute=0),
-    id='weekly_email_job',
-    replace_existing=True
-)
-scheduler.start()
-
-# Shutdown scheduler on app exit
-atexit.register(lambda: scheduler.shutdown())
-
 # ---------------- INIT DATABASE ----------------
-from models import db, Expense, Asset, Liability, BudgetLimit, BudgetAlert, PriceAlert, PriceAlertEvent, FinancialGoal, RecurringExpense, FinancialGoalMilestone, Portfolio
+from models import db, Expense, Asset, Liability, BudgetLimit, BudgetAlert, PriceAlert, FinancialGoal, RecurringExpense
 
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///money_mentor.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
@@ -1205,6 +1084,107 @@ def _get_period_key(frequency: str, d):
 
 
 @app.route("/recurring-expense", methods=["POST"])
+def create_recurring_expense():
+    """
+    Create a recurring expense template.
+    """
+    try:
+        data = request.json or {}
+        if not isinstance(data, dict):
+            raise ValidationError("Request body must be a JSON object")
+
+        category = validate_string(data.get("category"), "category")
+        amount = validate_float(data.get("amount"), "amount", min_val=0.01)
+        start_date = validate_string(data.get("start_date"), "start_date")  # YYYY-MM-DD
+        frequency = _validate_frequency(data.get("frequency"))
+
+        active = data.get("active", True)
+        if not isinstance(active, bool):
+            raise ValidationError("active must be a boolean")
+
+        end_date = data.get("end_date", None)
+        if end_date is not None:
+            end_date = validate_string(end_date, "end_date")  # YYYY-MM-DD
+
+        # Validate date format (YYYY-MM-DD)
+        import datetime
+        try:
+            start_dt = datetime.datetime.strptime(start_date, "%Y-%m-%d").date()
+        except Exception:
+            raise ValidationError("start_date must be in YYYY-MM-DD format")
+
+        if end_date:
+            try:
+                end_dt = datetime.datetime.strptime(end_date, "%Y-%m-%d").date()
+            except Exception:
+                raise ValidationError("end_date must be in YYYY-MM-DD format")
+            if end_dt < start_dt:
+                raise ValidationError("end_date cannot be before start_date")
+
+        rexp = RecurringExpense(
+            category=category,
+            amount=amount,
+            start_date=start_date,
+            frequency=frequency,
+            active=active,
+            end_date=end_date,
+        )
+        db.session.add(rexp)
+        db.session.commit()
+        return jsonify(rexp.to_dict()), 201
+
+    except ValidationError as e:
+        raise e
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+
+@app.route("/recurring-expense", methods=["GET"])
+def list_recurring_expenses():
+    try:
+        items = RecurringExpense.query.order_by(RecurringExpense.id.desc()).all()
+        return jsonify([i.to_dict() for i in items])
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+
+@app.route("/recurring-expense/<int:recurring_id>", methods=["DELETE"])
+def disable_recurring_expense(recurring_id):
+    """
+    Disable a recurring expense template.
+    """
+    try:
+        item = db.session.get(RecurringExpense, recurring_id)
+        if not item:
+            return jsonify({"error": "Recurring expense not found"}), 404
+        item.active = False
+        db.session.commit()
+        return jsonify({"status": "success", "id": recurring_id})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+# ---------------- NET WORTH TRACKER ----------------
+# Net Worth Tracker Features
+
+# ---------------- RECURRING EXPENSES ----------------
+def _validate_frequency(freq: str):
+    freq = (freq or "").strip().lower()
+    if freq not in ("monthly", "weekly", "yearly"):
+        raise ValidationError("frequency must be one of: monthly, weekly, yearly")
+    return freq
+
+
+def _get_period_key(frequency: str, d):
+    if frequency == "monthly":
+        return d.strftime("%Y-%m")
+    if frequency == "weekly":
+        iso_year, iso_week, _ = d.isocalendar()
+        return f"{iso_year}-W{iso_week:02d}"
+    # yearly
+    return d.strftime("%Y")
+
+
+@app.route("/recurring-expense", methods=["POST"])
 @login_required
 def create_recurring_expense():
     """
@@ -1862,6 +1842,50 @@ def check_all_recurring_expenses_job():
             occ_date = today.strftime("%Y-%m-%d")
             exp = Expense(
                 user_id=rexp.user_id,
+                category=rexp.category,
+                amount=rexp.amount,
+                date=occ_date,
+                is_recurring=True,
+                merchant_name=merchant_key,
+            )
+            db.session.add(exp)
+
+        db.session.commit()
+
+
+def check_all_recurring_expenses_job():
+    """
+    Daily recurring-expense scheduler:
+    - For each active RecurringExpense, generate an Expense occurrence for the current period
+      (monthly/weekly/yearly).
+    - Insert Expense row only once per period (duplicate guard using Expense.merchant_name).
+    """
+    with app.app_context():
+        import datetime
+
+        today = datetime.date.today()
+        active_items = RecurringExpense.query.filter_by(active=True).all()
+
+        for rexp in active_items:
+            start_dt = datetime.datetime.strptime(rexp.start_date, "%Y-%m-%d").date()
+            if today < start_dt:
+                continue
+
+            if rexp.end_date:
+                end_dt = datetime.datetime.strptime(rexp.end_date, "%Y-%m-%d").date()
+                if today > end_dt:
+                    continue
+
+            period_key = _get_period_key(rexp.frequency, today)
+            merchant_key = f"recurring_expense:{rexp.id}:{period_key}"
+
+            # duplicate guard (same template + same period)
+            exists = Expense.query.filter_by(merchant_name=merchant_key).first()
+            if exists:
+                continue
+
+            occ_date = today.strftime("%Y-%m-%d")
+            exp = Expense(
                 category=rexp.category,
                 amount=rexp.amount,
                 date=occ_date,

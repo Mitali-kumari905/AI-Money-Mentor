@@ -253,28 +253,10 @@ class FinancialGoal(db.Model):
             "user_id": self.user_id
         }
 
-class FinancialGoalMilestone(db.Model):
-    __tablename__ = "financial_goal_milestones"
-    id = db.Column(db.Integer, primary_key=True)
-    goal_id = db.Column(db.Integer, db.ForeignKey("financial_goals.id"), nullable=False, index=True)
-    month = db.Column(db.String(7), nullable=False)  # YYYY-MM
-    target_amount_for_month = db.Column(db.Float, nullable=False, default=0.0)
-    status = db.Column(db.String(20), nullable=False, default="planned")  # planned|completed
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "goal_id": self.goal_id,
-            "month": self.month,
-            "target_amount_for_month": self.target_amount_for_month,
-            "status": self.status,
-        }
 
 class RecurringExpense(db.Model):
     __tablename__ = "recurring_expenses"
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-    user = db.relationship("User", backref="recurring_expenses")
+
     id = db.Column(db.Integer, primary_key=True)
     category = db.Column(db.String(120), nullable=False)
     amount = db.Column(db.Float, nullable=False)
@@ -304,6 +286,16 @@ class RecurringExpense(db.Model):
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
 
+class RecurringExpense(db.Model):
+    __tablename__ = "recurring_expenses"
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    user = db.relationship("User", backref="recurring_expenses")
+    id = db.Column(db.Integer, primary_key=True)
+    category = db.Column(db.String(120), nullable=False)
+    amount = db.Column(db.Float, nullable=False)
+
+    # Stored as YYYY-MM-DD (strings) to keep the model consistent with existing Expense.date usage
+    start_date = db.Column(db.String(40), nullable=False)
 
 # ---------------- WEEKLY DIGEST (Scheduled AI) ----------------
 class DigestPreference(db.Model):
