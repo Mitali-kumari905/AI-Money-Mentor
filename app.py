@@ -3,7 +3,7 @@ import re
 from flask import Flask, request, jsonify, render_template
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 import sqlite3
 import atexit
 
@@ -62,8 +62,188 @@ from utils.validation import ValidationError, validate_string, validate_float, v
 
 app = Flask(__name__)
 
+
+# ============================================
+# EMAIL CONFIGURATION
+# ============================================
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = os.getenv('EMAIL_USER', 'your-email@gmail.com')
+app.config['MAIL_PASSWORD'] = os.getenv('EMAIL_PASS', 'your-app-password')
+app.config['MAIL_DEFAULT_SENDER'] = os.getenv('EMAIL_USER', 'your-email@gmail.com')
+
+mail = Mail(app)
+
+# ============================================
+# DATABASE FUNCTIONS FOR EMAIL SETTINGS
+# ============================================
+def init_email_db():
+    """Create email settings table if not exists"""
+    conn = sqlite3.connect('database.db')
+    c = conn.cursor()
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS user_settings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email VARCHAR(120) UNIQUE,
+            weekly_email_enabled BOOLEAN DEFAULT 1,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+def get_user_email_settings():
+    """Get all users with email enabled"""
+    conn = sqlite3.connect('database.db')
+    c = conn.cursor()
+    c.execute('SELECT email FROM user_settings WHERE weekly_email_enabled = 1')
+    users = c.fetchall()
+    conn.close()
+    return [user[0] for user in users]
+
+# Initialize email database
+init_email_db()
+
+# ============================================
+# WEEKLY REPORT GENERATOR
+# ============================================
+def generate_weekly_report(user_email):
+    """Generate weekly financial report for a user"""
+    return {
+        'date': datetime.now().strftime('%B %d, %Y'),
+        'total_spend': '₹12,450',
+        'spend_change': '+5.2',
+        'spend_change_class': 'positive' if 5.2 > 0 else 'negative',
+        'net_worth': '₹4,28,500',
+        'net_worth_change': '+2.1',
+        'budget_health': '85%',
+        'budget_health_class': 'positive' if 85 > 70 else 'negative',
+        'budget_health_text': 'On Track ✅' if 85 > 70 else 'Over Budget ⚠️',
+        'top_category': 'Food',
+        'top_category_amount': '₹4,200',
+        'top_categories': {
+            'Food': '₹4,200',
+            'Transport': '₹2,800',
+            'Shopping': '₹1,900',
+            'Entertainment': '₹1,500'
+        },
+        'ai_insight': 'You spent 40% more on dining out this week. Try cooking 2 extra meals at home to save ₹600.',
+        'dashboard_url': 'http://localhost:5000/dashboard',
+        'opt_out_url': 'http://localhost:5000/settings'
+    }
+
+def send_weekly_email(user_email):
+    """Send weekly report email to a user"""
+    try:
+        report_data = generate_weekly_report(user_email)
+        
+        msg = Message(
+            subject=f"📊 Weekly Financial Digest - {datetime.now().strftime('%B %d, %Y')}",
+            recipients=[user_email],
+            html=render_template('weekly_report.html', **report_data)
+        )
+        mail.send(msg)
+        print(f"✅ Email sent to {user_email}")
+        return True
+    except Exception as e:
+        print(f"❌ Failed to send email to {user_email}: {e}")
+        return False
+
+def send_weekly_reports():
+    """Send weekly reports to all users"""
+    print("🔄 Running weekly email job...")
+    users = get_user_email_settings()
+    
+    if not users:
+        print("📭 No users subscribed to weekly emails")
+        return
+    
+    success = 0
+    for user_email in users:
+        if send_weekly_email(user_email):
+            success += 1
+    
+    print(f"✅ Sent {success}/{len(users)} weekly reports")
+
+# ============================================
+# RECURRING EXPENSES
+# ============================================
+def process_recurring_expenses():
+    """Process recurring expenses and add them to expense tracker"""
+    print("🔄 Processing recurring expenses...")
+    today = date.today()
+    
+    try:
+        from models import RecurringExpense, Expense
+        
+        # Get all active recurring expenses due today
+        due_expenses = RecurringExpense.query.filter(
+            RecurringExpense.is_active == True,
+            RecurringExpense.next_due_date <= today
+        ).all()
+        
+        if not due_expenses:
+            print("📭 No recurring expenses due today")
+            return
+        
+        added_count = 0
+        for recurring in due_expenses:
+            # Check if already added today (avoid duplicates)
+            existing = Expense.query.filter(
+                Expense.merchant == recurring.merchant,
+                Expense.amount == recurring.amount,
+                Expense.date == today,
+                Expense.category == recurring.category
+            ).first()
+            
+            if existing:
+                continue
+            
+            # Create expense entry
+            expense = Expense(
+                amount=recurring.amount,
+                category=recurring.category,
+                merchant=recurring.merchant or 'Recurring',
+                date=today
+            )
+            db.session.add(expense)
+            
+            # Update next due date based on frequency
+            if recurring.frequency == 'daily':
+                next_date = today + timedelta(days=1)
+            elif recurring.frequency == 'weekly':
+                next_date = today + timedelta(days=7)
+            elif recurring.frequency == 'monthly':
+                next_date = today + timedelta(days=30)
+            elif recurring.frequency == 'quarterly':
+                next_date = today + timedelta(days=90)
+            elif recurring.frequency == 'yearly':
+                next_date = today + timedelta(days=365)
+            else:
+                next_date = today + timedelta(days=30)
+            
+            recurring.next_due_date = next_date
+            recurring.last_processed = today
+            added_count += 1
+        
+        db.session.commit()
+        print(f"✅ Added {added_count} recurring expenses")
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ Error processing recurring expenses: {e}")
+
+# ---------------- INIT DATABASE ----------------
++
+from models import db, Expense, Asset, Liability, BudgetLimit, BudgetAlert, PriceAlert, PriceAlertEvent, FinancialGoal, RecurringExpense
++
+from models import db, Expense, Asset, Liability, RecurringExpense
+
+
 # ---------------- INIT DATABASE ----------------
 from models import db, Expense, Asset, Liability, BudgetLimit, BudgetAlert, PriceAlert, PriceAlertEvent, FinancialGoal, RecurringExpense, Portfolio
+
 
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///money_mentor.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
@@ -89,6 +269,32 @@ with app.app_context():
 if os.getenv("FLASK_ENV", "development") != "production":
 
     print("[OK] Groq client initialised successfully.")
+
+# ============================================
+# SCHEDULER - Runs weekly email and recurring expenses
+# ============================================
+scheduler = BackgroundScheduler()
+
+# Weekly email job - Every Monday at 9:00 AM
+scheduler.add_job(
+    func=send_weekly_reports,
+    trigger=CronTrigger(day_of_week='mon', hour=9, minute=0),
+    id='weekly_email_job',
+    replace_existing=True
+)
+
+# Recurring expenses job - Every day at 9:00 AM
+scheduler.add_job(
+    func=process_recurring_expenses,
+    trigger=CronTrigger(hour=9, minute=0),
+    id='recurring_expense_job',
+    replace_existing=True
+)
+
+scheduler.start()
+
+# Shutdown scheduler on app exit
+atexit.register(lambda: scheduler.shutdown())
 
 # ============================================
 # ROUTES
@@ -182,6 +388,7 @@ def retirement():
     return render_template('retirement.html')
 
 # ---------------- SETTINGS ----------------
+
 @app.route('/settings')
 def settings():
     """User settings page"""
@@ -227,6 +434,9 @@ def unsubscribe():
     
     return jsonify({'success': True, 'message': 'Unsubscribed successfully'})
 
+
+
+
 # ---------------- TEST EMAIL ROUTES ----------------
 @app.route('/test-email')
 def test_email():
@@ -241,10 +451,184 @@ def force_weekly():
     send_weekly_reports()
     return "Weekly reports sent manually!"
 
+
+
+# ---------------- RECURRING EXPENSES ROUTES ----------------
+@app.route('/recurring')
+def recurring_page():
+    """Recurring Expenses Management Page"""
+    return render_template('recurring.html')
+
+@app.route('/api/recurring/detect', methods=['GET'])
+def detect_recurring_expenses():
+    """Auto-detect recurring expense patterns from last 60 days"""
+    try:
+        cutoff_date = date.today() - timedelta(days=60)
+        expenses = Expense.query.filter(
+            Expense.date >= cutoff_date
+        ).order_by(Expense.date.desc()).all()
+        
+        if not expenses:
+            return jsonify({
+                'success': True,
+                'detected': [],
+                'message': 'No expenses found in last 60 days'
+            })
+        
+        # Group by merchant and category
+        patterns = {}
+        for exp in expenses:
+            key = f"{exp.merchant or 'Unknown'}_{exp.category}"
+            if key not in patterns:
+                patterns[key] = {
+                    'merchant': exp.merchant or 'Unknown',
+                    'category': exp.category,
+                    'amounts': [],
+                    'dates': []
+                }
+            patterns[key]['amounts'].append(exp.amount)
+            patterns[key]['dates'].append(exp.date)
+        
+        # Analyze patterns
+        detected = []
+        for key, data in patterns.items():
+            if len(data['amounts']) >= 2:
+                avg_amount = sum(data['amounts']) / len(data['amounts'])
+                variation = max([abs(a - avg_amount) / avg_amount for a in data['amounts']])
+                
+                if variation <= 0.10:
+                    sorted_dates = sorted(data['dates'])
+                    if len(sorted_dates) >= 2:
+                        day_diffs = []
+                        for i in range(1, len(sorted_dates)):
+                            diff = (sorted_dates[i] - sorted_dates[i-1]).days
+                            day_diffs.append(diff)
+                        
+                        avg_diff = sum(day_diffs) / len(day_diffs)
+                        
+                        frequency = None
+                        if 28 <= avg_diff <= 31:
+                            frequency = 'monthly'
+                        elif 7 <= avg_diff <= 8:
+                            frequency = 'weekly'
+                        elif 85 <= avg_diff <= 95:
+                            frequency = 'quarterly'
+                        elif 355 <= avg_diff <= 370:
+                            frequency = 'yearly'
+                        
+                        if frequency:
+                            detected.append({
+                                'merchant': data['merchant'],
+                                'category': data['category'],
+                                'amount': round(avg_amount, 2),
+                                'frequency': frequency,
+                                'next_due': (sorted_dates[-1] + timedelta(days=round(avg_diff))).isoformat(),
+                                'confidence': 'high' if len(data['amounts']) >= 3 else 'medium'
+                            })
+        
+        return jsonify({
+            'success': True,
+            'detected': detected,
+            'count': len(detected)
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/recurring/add', methods=['POST'])
+def add_recurring_expense():
+    """Add a recurring expense manually or from detection"""
+    try:
+        data = request.json
+        
+        required = ['amount', 'category', 'frequency', 'start_date', 'next_due_date']
+        for field in required:
+            if field not in data:
+                return jsonify({'success': False, 'error': f'Missing field: {field}'}), 400
+        
+        recurring = RecurringExpense(
+            amount=float(data['amount']),
+            category=data['category'],
+            merchant=data.get('merchant', ''),
+            frequency=data['frequency'],
+            start_date=datetime.strptime(data['start_date'], '%Y-%m-%d').date(),
+            next_due_date=datetime.strptime(data['next_due_date'], '%Y-%m-%d').date(),
+            end_date=datetime.strptime(data['end_date'], '%Y-%m-%d').date() if data.get('end_date') else None,
+            auto_add=data.get('auto_add', True),
+            is_active=True
+        )
+        
+        db.session.add(recurring)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Recurring expense added successfully',
+            'id': recurring.id
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/recurring/list', methods=['GET'])
+def get_recurring_expenses():
+    """Get all active recurring expenses"""
+    try:
+        recurring = RecurringExpense.query.filter_by(is_active=True).all()
+        return jsonify({
+            'success': True,
+            'recurring': [r.to_dict() for r in recurring]
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/recurring/delete/<int:id>', methods=['DELETE'])
+def delete_recurring_expense(id):
+    """Delete a recurring expense"""
+    try:
+        recurring = RecurringExpense.query.get(id)
+        if not recurring:
+            return jsonify({'success': False, 'error': 'Not found'}), 404
+        
+        db.session.delete(recurring)
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'Deleted successfully'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/recurring/toggle/<int:id>', methods=['POST'])
+def toggle_recurring_expense(id):
+    """Toggle active status of recurring expense"""
+    try:
+        recurring = RecurringExpense.query.get(id)
+        if not recurring:
+            return jsonify({'success': False, 'error': 'Not found'}), 404
+        
+        recurring.is_active = not recurring.is_active
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'is_active': recurring.is_active,
+            'message': 'Status updated'
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/recurring/process-now', methods=['POST'])
+def process_recurring_now():
+    """Manually trigger recurring expense processing (for testing)"""
+    process_recurring_expenses()
+    return jsonify({'success': True, 'message': 'Recurring expenses processed'})
+
 # ---------------- HEALTH CHECK ----------------
 @app.route("/health", methods=["GET"])
 def health_check():
-    """Lightweight liveness probe for deployment environments (Docker, Railway, etc.)."""
+    """Lightweight liveness probe for deployment environments."""
     return jsonify({"status": "ok", "service": "AI Money Mentor"}), 200
 
 @app.route("/dashboard-data")
@@ -286,6 +670,13 @@ def dashboard_data():
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
+
+@app.route('/retirement')
+def retirement():
+    """Retirement & Inflation Simulator Page"""
+    return render_template('retirement.html')
+
+    
 @app.route("/dashboard/recent-activity")
 @login_required
 def recent_activity():
@@ -415,66 +806,58 @@ def internal_server_error(error):
     }), 500
 
 # ---------------- 🤖 AI CHAT ----------------
-@app.route("/chat", methods=["GET", "POST"])
+@app.route("/chat", methods=["POST"])
 def chat():
-    if request.method == "GET":
-        return render_template("chat.html", active_page="chat")
     try:
-        if client is None:
-            return jsonify({
-                "reply": "AI Money Mentor is offline because GROQ_API_KEY is not configured. Please set GROQ_API_KEY in your env/config files."
-            })
+        data = request.json
+        msg = data.get("message")
+        history = data.get("history", [])
 
-        data = request.json or {}
-        if not isinstance(data, dict):
-            raise ValidationError("Request body must be a JSON object")
-        msg = validate_string(data.get("message"), "message")
-        history = validate_history(data.get("history"))
+        # Stronger system prompt to prevent hallucinations
+        system_prompt = """You are a professional financial advisor for Indian users.
 
+CRITICAL RULES - YOU MUST FOLLOW:
+1. NEVER invent numbers, amounts, or financial data about the user.
+2. If you don't know the user's income, savings, or expenses, ASK for that information.
+3. If the user asks for advice without providing data, give general methodology only (e.g., "A common rule is 50/30/20: 50% needs, 30% wants, 20% savings").
+4. Always be honest about what you don't know.
+5. Provide practical, actionable advice based ONLY on information the user has shared.
 
-        messages = [{"role": "system", "content": "You are a financial advisor for India."}]
+Example responses:
+- User: "Give me a budget breakdown" → "I don't have your income information yet. Could you please share your monthly income and expenses so I can create a personalized budget?"
+- User: "I earn ₹80,000 monthly" → "Great! Based on your ₹80,000 income, here's a budget breakdown..."
 
-        # Build messages: system prompt + last 10 history turns + current message
-        system_prompt = (
-            "You are an expert AI financial advisor for Indian users.\n\n"
-            "Your job:\n"
-            "- Help users manage money smartly\n"
-            "- Teach budgeting, saving, and investing\n"
-            "- Give simple, practical, real-life advice\n\n"
-            "Response rules:\n"
-            "- Always use structured format:\n"
-            "Income / Situation Summary:\n"
-            "- ...\n"
-            "Budget Breakdown (if applicable):\n"
-            "- Needs: 50%\n"
-            "- Wants: 30%\n"
-            "- Savings: 20%\n"
-            "Advice:\n"
-            "- Give clear steps\n"
-            "- Keep it simple and actionable\n\n"
-            "Tone:\n"
-            "- Friendly, practical, and easy to understand"
-        )
+Structure your responses clearly with:
+- Brief summary
+- Actionable steps
+- Specific recommendations
+
+Be friendly, supportive, and encouraging."""
+
         messages = [{"role": "system", "content": system_prompt}]
-
-        messages += history[-10:]
+        
+        # Add conversation history (last 10 messages)
+        if history:
+            messages += history[-10:]
+        
         messages.append({"role": "user", "content": msg})
 
         res = client.chat.completions.create(
             model="llama-3.1-8b-instant",
-            messages=messages
+            messages=messages,
+            temperature=0.7,
+            max_tokens=500
         )
 
-        return jsonify({
-            "reply": res.choices[0].message.content
-        })
+        reply = res.choices[0].message.content
+        
+        # Apply markdown formatting on backend as well (optional)
+        return jsonify({"reply": reply})
 
-    except ValidationError as e:
-        raise e
     except Exception as e:
-        app.logger.error(f"Groq API Error: {str(e)}")
+        app.logger.error(f"Chat error: {e}")
         return jsonify({
-            "reply": "Unable to generate a response at the moment. Please try again later."
+            "reply": "⚠️ I'm having trouble connecting. Please try again in a moment."
         }), 500
 
 # ---------------- 💸 SIP ----------------
@@ -996,6 +1379,7 @@ def export_pdf():
 @login_required
 def add_expense():
     try:
+
         data = request.json or {}
         if not isinstance(data, dict):
             raise ValidationError("Request body must be a JSON object")
@@ -1003,12 +1387,28 @@ def add_expense():
         amount = validate_float(data.get("amount"), "amount", min_val=0.01)
         date = validate_string(data.get("date"), "date")
 
+
+        expense = Expense()
+        expense.category = category
+        expense.amount = amount
+        expense.date = date
+
+        data = request.json
+        expense = Expense(
+            category=data["category"],
+            amount=float(data["amount"]),
+            date=data["date"],
+            merchant=data.get("merchant", "")
+        )
+
+
         expense = Expense(
             category=category,
             amount=amount,
             date=date,
             user_id=current_user.id
         )
+
         db.session.add(expense)
         db.session.commit()
         
@@ -1298,6 +1698,81 @@ def delete_item():
         raise e
     except Exception as e:
         return jsonify({"error": str(e)}), 400
+
+
+
+# ---------------- VOICE EXPENSE PARSER ----------------
+@app.route('/api/parse-expense-text', methods=['POST'])
+def parse_expense_text():
+    """Parse spoken text to extract amount, category, and merchant"""
+    try:
+        data = request.json
+        text = data.get('text', '').strip()
+        
+        if not text:
+            return jsonify({'success': False, 'error': 'No text provided'}), 400
+        
+        prompt = f"""
+        You are a financial data extractor. Extract the following details from this spoken text:
+        "{text}"
+        
+        Return ONLY valid JSON in this exact format:
+        {{
+            "amount": number or null,
+            "category": string or null,
+            "merchant": string or null
+        }}
+        
+        Categories must be one of: Food, Rent, Travel, Shopping, Utilities, Entertainment, Healthcare, Other.
+        
+        Examples:
+        - "Uber ride to airport 450 rupees" → {{"amount": 450, "category": "Travel", "merchant": "Uber"}}
+        - "Bought groceries for 1200 at Big Basket" → {{"amount": 1200, "category": "Food", "merchant": "Big Basket"}}
+        - "Paid electricity bill 800 rupees" → {{"amount": 800, "category": "Utilities", "merchant": null}}
+        """
+        
+        response = client.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            messages=[
+                {"role": "system", "content": "You are a financial data extractor. Return only valid JSON."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.1,
+            max_tokens=100
+        )
+        
+        result_text = response.choices[0].message.content.strip()
+        
+        import json
+        try:
+            start = result_text.find('{')
+            end = result_text.rfind('}') + 1
+            if start != -1 and end > start:
+                json_str = result_text[start:end]
+                parsed = json.loads(json_str)
+                
+                result = {
+                    'success': True,
+                    'amount': parsed.get('amount'),
+                    'category': parsed.get('category'),
+                    'merchant': parsed.get('merchant')
+                }
+                
+                valid_categories = ['Food', 'Rent', 'Travel', 'Shopping', 'Utilities', 'Entertainment', 'Healthcare', 'Other']
+                if result['category'] and result['category'] not in valid_categories:
+                    result['category'] = 'Other'
+                
+                return jsonify(result)
+            else:
+                raise ValueError("No JSON found in response")
+                
+        except Exception as e:
+            print(f"JSON parse error: {e}")
+            return jsonify({'success': False, 'error': 'Failed to parse AI response'}), 500
+        
+    except Exception as e:
+        print(f"Voice parse error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 
 # ---------------- RUN ----------------
