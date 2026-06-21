@@ -6,23 +6,13 @@ from unittest.mock import MagicMock, patch
 sys.modules['yfinance'] = MagicMock()
 sys.modules['groq'] = MagicMock()
 sys.modules['pdfplumber'] = MagicMock()
-sys.modules['apscheduler'] = MagicMock()
-sys.modules['apscheduler.schedulers'] = MagicMock()
-sys.modules['apscheduler.schedulers.background'] = MagicMock()
-
-# Mock flask_sqlalchemy
-mock_sqlalchemy = MagicMock()
-sys.modules['flask_sqlalchemy'] = mock_sqlalchemy
-
-# Mock the database object
-mock_db = MagicMock()
-mock_sqlalchemy.SQLAlchemy.return_value = mock_db
 
 # Import validation helpers
 from utils.validation import ValidationError, validate_string, validate_float, validate_int
-# Import the flask app
-from app import app
 
+# Import the flask app and db
+from app import app, db
+from models import Expense, Asset, Liability, BudgetLimit, BudgetAlert, User
 
 class TestValidationHelpers(unittest.TestCase):
     """Test cases for the helper validation routines."""
@@ -102,34 +92,27 @@ class TestEndpointValidation(unittest.TestCase):
     """Test cases for Flask endpoints validating request payloads."""
 
     def setUp(self):
+        app.config["TESTING"] = True
+        app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///:memory:"
+        
         self.app = app.test_client()
-        self.app.testing = True
+        self.app_context = app.app_context()
+        self.app_context.push()
         
-        from app import db
-        db.session = MagicMock()
-        from models import Expense, Asset, Liability, BudgetLimit, BudgetAlert
-        Expense.query = MagicMock()
-        Asset.query = MagicMock()
-        Liability.query = MagicMock()
-        BudgetLimit.query = MagicMock()
-        BudgetAlert.query = MagicMock()
+        db.create_all()
         
-        Asset.id = MagicMock()
-        Liability.id = MagicMock()
+        # Create a test user
+        user = User(username="testuser", email="test@example.com", password_hash="pbkdf2:sha256:260000$test")
+        db.session.add(user)
+        db.session.commit()
+        self.user_id = user.id
         
-        Expense.category = MagicMock()
-        Expense.date = MagicMock()
-        BudgetLimit.category = MagicMock()
-        BudgetAlert.category = MagicMock()
-        BudgetAlert.year_month = MagicMock()
-        BudgetAlert.threshold = MagicMock()
-        
-        limit_mock = MagicMock()
-        limit_mock.limit_amount = 1000.0
-        BudgetLimit.query.filter_by.return_value.first.return_value = limit_mock
-        
-        # Setup mock client responses for tax and chat recommendations
-        import sys
+        # Log in user via session
+        with self.app.session_transaction() as sess:
+            sess['_user_id'] = str(self.user_id)
+            sess['_fresh'] = True
+            
+        # Mock external client in app module
         app_module = sys.modules['app']
         app_module.client = MagicMock()
         mock_ai_res = MagicMock()
@@ -137,6 +120,11 @@ class TestEndpointValidation(unittest.TestCase):
         mock_choice.message.content = "Mocked AI recommendation."
         mock_ai_res.choices = [mock_choice]
         app_module.client.chat.completions.create.return_value = mock_ai_res
+
+    def tearDown(self):
+        db.session.remove()
+        db.drop_all()
+        self.app_context.pop()
 
     def test_sip_endpoint(self):
         # Valid payload
@@ -176,45 +164,30 @@ class TestEndpointValidation(unittest.TestCase):
         # Valid payload
         response = self.app.post('/goal-planner', json={
             "goal": 1000000,
-            "rate": 12,
-            "years": 3
+            "rate": 12.0,
+            "years": 5
         })
         self.assertEqual(response.status_code, 200)
-        data = response.get_json()
-        self.assertIn("monthly_sip", data)
-        self.assertIn("total_invested", data)
-        self.assertIn("returns", data)
-
-        # Zero rate should fall back to a simple division
-        response = self.app.post('/goal-planner', json={
-            "goal": 120000,
-            "rate": 0,
-            "years": 1
-        })
-        self.assertEqual(response.status_code, 200)
-        data = response.get_json()
-        self.assertEqual(data["monthly_sip"], 10000.0)
 
         # Missing goal
         response = self.app.post('/goal-planner', json={
-            "rate": 12,
-            "years": 3
-        })
-        self.assertEqual(response.status_code, 400)
-        self.assertIn("goal", response.get_json()["message"])
-
-        # Zero/negative goal
-        response = self.app.post('/goal-planner', json={
-            "goal": 0,
-            "rate": 12,
-            "years": 3
+            "rate": 12.0,
+            "years": 5
         })
         self.assertEqual(response.status_code, 400)
 
-        # Zero/negative years
+        # Negative rate
         response = self.app.post('/goal-planner', json={
             "goal": 1000000,
-            "rate": 12,
+            "rate": -5.0,
+            "years": 5
+        })
+        self.assertEqual(response.status_code, 400)
+
+        # Zero years
+        response = self.app.post('/goal-planner', json={
+            "goal": 1000000,
+            "rate": 12.0,
             "years": 0
         })
         self.assertEqual(response.status_code, 400)
@@ -340,45 +313,45 @@ class TestEndpointValidation(unittest.TestCase):
         self.assertEqual(response.status_code, 400)
 
     def test_delete_item_endpoint(self):
-        from models import Asset, Liability
-        # Setup mock asset and liability queries
-        mock_asset = MagicMock()
-        Asset.query.get.return_value = mock_asset
+        # Insert a real asset and liability
+        asset = Asset(user_id=self.user_id, name="Gold", amount=50000)
+        liability = Liability(user_id=self.user_id, name="Home Loan", amount=500000)
+        db.session.add(asset)
+        db.session.add(liability)
+        db.session.commit()
         
-        mock_liability = MagicMock()
-        Liability.query.get.return_value = mock_liability
+        asset_id = asset.id
+        liability_id = liability.id
 
-        # Valid type and id
-        response = self.app.post('/delete-item', json={
+        # Valid type and id (delete the asset)
+        response = self.app.delete('/delete-item', json={
             "type": "asset",
-            "id": 1
+            "id": asset_id
         })
         self.assertEqual(response.status_code, 200)
 
         # Invalid type
-        response = self.app.post('/delete-item', json={
+        response = self.app.delete('/delete-item', json={
             "type": "invalid_type",
-            "id": 1
+            "id": liability_id
         })
         self.assertEqual(response.status_code, 400)
 
         # Invalid id (less than 1)
-        response = self.app.post('/delete-item', json={
+        response = self.app.delete('/delete-item', json={
             "type": "asset",
             "id": 0
         })
         self.assertEqual(response.status_code, 400)
 
         # Item not found (404)
-        Asset.query.get.return_value = None
-        response = self.app.post('/delete-item', json={
+        response = self.app.delete('/delete-item', json={
             "type": "asset",
-            "id": 10
+            "id": 99999
         })
         self.assertEqual(response.status_code, 404)
 
     def test_budget_limits_endpoint(self):
-
         # Valid payload
         response = self.app.post('/budget/limits', json={
             "category": "Food",

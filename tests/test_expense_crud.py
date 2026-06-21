@@ -29,6 +29,19 @@ def client():
         
     app.config["TESTING"] = True
     with app.test_client() as client:
+        with app.app_context():
+            from models import User
+            user = User.query.filter_by(email="test@example.com").first()
+            if not user:
+                user = User(username="testuser", email="test@example.com", password_hash="pbkdf2:sha256:260000$test")
+                db.session.add(user)
+                db.session.commit()
+            user_id = user.id
+            
+        with client.session_transaction() as sess:
+            sess['_user_id'] = str(user_id)
+            sess['_fresh'] = True
+            
         yield client
         
     # Restore the database state

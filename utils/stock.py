@@ -5,6 +5,10 @@ import time
 STOCK_CACHE = {}
 CACHE_EXPIRY = 600  # 10 minutes in seconds
 
+DIVIDEND_CACHE = {}
+DIVIDEND_CACHE_EXPIRY = 3600  # 1 hour in seconds
+
+
 def get_stock_price(symbol):
     try:
         # Clean input
@@ -85,3 +89,48 @@ def get_stock_price(symbol):
 
     except Exception as e:
         return {"error": str(e)}
+
+def get_stock_dividends(symbol):
+    try:
+        symbol = symbol.strip().upper()
+        if not symbol or not re.match(r"^[A-Z0-9.\-_]+$", symbol):
+            return []
+
+        now = time.time()
+        if symbol in DIVIDEND_CACHE:
+            cached_res, timestamp = DIVIDEND_CACHE[symbol]
+            if now - timestamp < DIVIDEND_CACHE_EXPIRY:
+                return cached_res
+
+        # Try finding as is first
+        stock = yf.Ticker(symbol)
+        try:
+            divs = stock.dividends
+        except Exception:
+            divs = None
+
+        # If empty and no dot in symbol, try appending .NS
+        if (divs is None or divs.empty) and "." not in symbol:
+            symbol_ns = symbol + ".NS"
+            stock = yf.Ticker(symbol_ns)
+            try:
+                divs = stock.dividends
+            except Exception:
+                divs = None
+
+        if divs is None or divs.empty:
+            ret = []
+        else:
+            ret = []
+            for idx, val in zip(divs.index, divs.values):
+                ret.append({
+                    "date": idx.strftime("%Y-%m-%d"),
+                    "amount": float(val)
+                })
+
+        DIVIDEND_CACHE[symbol] = (ret, time.time())
+        return ret
+    except Exception as e:
+        print(f"Error fetching dividends for {symbol}: {e}")
+        return []
+

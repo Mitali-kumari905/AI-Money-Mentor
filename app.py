@@ -1,9 +1,8 @@
-
+import re
 from flask import Flask, request, jsonify, render_template
-from flask_mail import Mail, Message
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 import sqlite3
 import atexit
 
@@ -24,6 +23,8 @@ from flask_login import (
     login_required
 )
 
+from flask_mail import Mail, Message
+
 from werkzeug.security import (
     generate_password_hash,
     check_password_hash
@@ -42,23 +43,20 @@ if not GROQ_API_KEY or GROQ_API_KEY.strip() in ("", "your_groq_api_key_here"):
         "  Obtain a free key at: https://console.groq.com/\n",
         file=sys.stderr,
     )
-
-    sys.exit(1)
-
-
     client = None
 else:
     client = Groq(api_key=GROQ_API_KEY)
 
 # ---------------- IMPORT UTILS ----------------
 from utils.sip import calculate_sip, calculate_goal_sip
-from utils.tax import calculate_tax
+from utils.tax import calculate_tax, tax_optimization_module
 from utils.pdf_parser import extract_income
 from utils.money_score import calculate_money_score
 from utils.multi_agent import run_multi_agent
-from utils.stock import get_stock_price
+from utils.stock import get_stock_price, get_stock_dividends
 from utils.expense_track import calculate_expense, insights
 from utils.validation import ValidationError, validate_string, validate_float, validate_int, validate_history
+from utils.safety_engine import SafetyEngine
 
 app = Flask(__name__)
 
@@ -68,8 +66,8 @@ app = Flask(__name__)
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_PORT'] = 587
 app.config['MAIL_USE_TLS'] = True
-app.config['MAIL_USERNAME'] = os.getenv('EMAIL_USER', 'your-email@gmail.com')  # Change this
-app.config['MAIL_PASSWORD'] = os.getenv('EMAIL_PASS', 'your-app-password')     # Change this
+app.config['MAIL_USERNAME'] = os.getenv('EMAIL_USER', 'your-email@gmail.com')
+app.config['MAIL_PASSWORD'] = os.getenv('EMAIL_PASS', 'your-app-password')
 app.config['MAIL_DEFAULT_SENDER'] = os.getenv('EMAIL_USER', 'your-email@gmail.com')
 
 mail = Mail(app)
@@ -109,8 +107,6 @@ init_email_db()
 # ============================================
 def generate_weekly_report(user_email):
     """Generate weekly financial report for a user"""
-    # For now, return sample data
-    # In production, fetch from database
     return {
         'date': datetime.now().strftime('%B %d, %Y'),
         'total_spend': '₹12,450',
@@ -168,23 +164,75 @@ def send_weekly_reports():
     print(f"✅ Sent {success}/{len(users)} weekly reports")
 
 # ============================================
-# SCHEDULER - Runs every Monday at 9:00 AM
+# RECURRING EXPENSES
 # ============================================
-scheduler = BackgroundScheduler()
-
-scheduler.add_job(
-    func=send_weekly_reports,
-    trigger=CronTrigger(day_of_week='mon', hour=9, minute=0),
-    id='weekly_email_job',
-    replace_existing=True
-)
-scheduler.start()
-
-# Shutdown scheduler on app exit
-atexit.register(lambda: scheduler.shutdown())
+def process_recurring_expenses():
+    """Process recurring expenses and add them to expense tracker"""
+    print("🔄 Processing recurring expenses...")
+    today = date.today()
+    
+    try:
+        from models import RecurringExpense, Expense
+        
+        # Get all active recurring expenses due today
+        due_expenses = RecurringExpense.query.filter(
+            RecurringExpense.is_active == True,
+            RecurringExpense.next_due_date <= today
+        ).all()
+        
+        if not due_expenses:
+            print("📭 No recurring expenses due today")
+            return
+        
+        added_count = 0
+        for recurring in due_expenses:
+            # Check if already added today (avoid duplicates)
+            existing = Expense.query.filter(
+                Expense.merchant == recurring.merchant,
+                Expense.amount == recurring.amount,
+                Expense.date == today,
+                Expense.category == recurring.category
+            ).first()
+            
+            if existing:
+                continue
+            
+            # Create expense entry
+            expense = Expense(
+                amount=recurring.amount,
+                category=recurring.category,
+                merchant=recurring.merchant or 'Recurring',
+                date=today
+            )
+            db.session.add(expense)
+            
+            # Update next due date based on frequency
+            if recurring.frequency == 'daily':
+                next_date = today + timedelta(days=1)
+            elif recurring.frequency == 'weekly':
+                next_date = today + timedelta(days=7)
+            elif recurring.frequency == 'monthly':
+                next_date = today + timedelta(days=30)
+            elif recurring.frequency == 'quarterly':
+                next_date = today + timedelta(days=90)
+            elif recurring.frequency == 'yearly':
+                next_date = today + timedelta(days=365)
+            else:
+                next_date = today + timedelta(days=30)
+            
+            recurring.next_due_date = next_date
+            recurring.last_processed = today
+            added_count += 1
+        
+        db.session.commit()
+        print(f"✅ Added {added_count} recurring expenses")
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ Error processing recurring expenses: {e}")
 
 # ---------------- INIT DATABASE ----------------
-from models import db, Expense, Asset, Liability, BudgetLimit, BudgetAlert, PriceAlert, PriceAlertEvent, FinancialGoal, RecurringExpense, FinancialGoalMilestone, Portfolio
+from models import db, Expense, Asset, Liability, BudgetLimit, BudgetAlert, PriceAlert, PriceAlertEvent, FinancialGoal, RecurringExpense, Portfolio
 
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///money_mentor.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
@@ -203,20 +251,14 @@ from models import User
 with app.app_context():
     db.create_all()
 
+# ---------------- INIT SAFETY ENGINE ----------------
+safety_engine = SafetyEngine()
+
 # ---------------- INIT GROQ ----------------
 # client is initialized in the startup validation block above
 
 # ── Dev-mode startup message ─────────────────────────────────
 if os.getenv("FLASK_ENV", "development") != "production":
-
-    print("[OK] Groq client initialised successfully.")
-
-# ============================================
-# ROUTES
-# ============================================
-
-# ---------------- HOME ----------------
-
     if client:
         print("[OK] Groq client initialised successfully.")
     else:
@@ -226,6 +268,37 @@ if os.getenv("FLASK_ENV", "development") != "production":
 def load_user(user_id):
     return db.session.get(User, int(user_id))
 
+# ============================================
+# SCHEDULER - Runs weekly email and recurring expenses
+# ============================================
+scheduler = BackgroundScheduler()
+
+# Weekly email job - Every Monday at 9:00 AM
+scheduler.add_job(
+    func=send_weekly_reports,
+    trigger=CronTrigger(day_of_week='mon', hour=9, minute=0),
+    id='weekly_email_job',
+    replace_existing=True
+)
+
+# Recurring expenses job - Every day at 9:00 AM
+scheduler.add_job(
+    func=process_recurring_expenses,
+    trigger=CronTrigger(hour=9, minute=0),
+    id='recurring_expense_job',
+    replace_existing=True
+)
+
+scheduler.start()
+
+# Shutdown scheduler on app exit
+atexit.register(lambda: scheduler.shutdown())
+
+# ============================================
+# ROUTES
+# ============================================
+
+# ---------------- HOME ----------------
 @app.route("/register", methods=["POST"])
 def register():
     data = request.json or {}
@@ -241,7 +314,7 @@ def register():
     if User.query.filter_by(email=email).first():
         return jsonify({"error": "Email already exists."}), 400
 
-    user = User(username=username, email=email,password_hash=generate_password_hash(password))
+    user = User(username=username, email=email, password_hash=generate_password_hash(password))
     db.session.add(user)
     db.session.commit()
     login_user(user)
@@ -362,10 +435,182 @@ def force_weekly():
     send_weekly_reports()
     return "Weekly reports sent manually!"
 
+# ---------------- RECURRING EXPENSES ROUTES ----------------
+@app.route('/recurring')
+def recurring_page():
+    """Recurring Expenses Management Page"""
+    return render_template('recurring.html')
+
+@app.route('/api/recurring/detect', methods=['GET'])
+def detect_recurring_expenses():
+    """Auto-detect recurring expense patterns from last 60 days"""
+    try:
+        cutoff_date = date.today() - timedelta(days=60)
+        expenses = Expense.query.filter(
+            Expense.date >= cutoff_date
+        ).order_by(Expense.date.desc()).all()
+        
+        if not expenses:
+            return jsonify({
+                'success': True,
+                'detected': [],
+                'message': 'No expenses found in last 60 days'
+            })
+        
+        # Group by merchant and category
+        patterns = {}
+        for exp in expenses:
+            key = f"{exp.merchant or 'Unknown'}_{exp.category}"
+            if key not in patterns:
+                patterns[key] = {
+                    'merchant': exp.merchant or 'Unknown',
+                    'category': exp.category,
+                    'amounts': [],
+                    'dates': []
+                }
+            patterns[key]['amounts'].append(exp.amount)
+            patterns[key]['dates'].append(exp.date)
+        
+        # Analyze patterns
+        detected = []
+        for key, data in patterns.items():
+            if len(data['amounts']) >= 2:
+                avg_amount = sum(data['amounts']) / len(data['amounts'])
+                variation = max([abs(a - avg_amount) / avg_amount for a in data['amounts']])
+                
+                if variation <= 0.10:
+                    sorted_dates = sorted(data['dates'])
+                    if len(sorted_dates) >= 2:
+                        day_diffs = []
+                        for i in range(1, len(sorted_dates)):
+                            diff = (sorted_dates[i] - sorted_dates[i-1]).days
+                            day_diffs.append(diff)
+                        
+                        avg_diff = sum(day_diffs) / len(day_diffs)
+                        
+                        frequency = None
+                        if 28 <= avg_diff <= 31:
+                            frequency = 'monthly'
+                        elif 7 <= avg_diff <= 8:
+                            frequency = 'weekly'
+                        elif 85 <= avg_diff <= 95:
+                            frequency = 'quarterly'
+                        elif 355 <= avg_diff <= 370:
+                            frequency = 'yearly'
+                        
+                        if frequency:
+                            detected.append({
+                                'merchant': data['merchant'],
+                                'category': data['category'],
+                                'amount': round(avg_amount, 2),
+                                'frequency': frequency,
+                                'next_due': (sorted_dates[-1] + timedelta(days=round(avg_diff))).isoformat(),
+                                'confidence': 'high' if len(data['amounts']) >= 3 else 'medium'
+                            })
+        
+        return jsonify({
+            'success': True,
+            'detected': detected,
+            'count': len(detected)
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/recurring/add', methods=['POST'])
+def add_recurring_expense():
+    """Add a recurring expense manually or from detection"""
+    try:
+        data = request.json
+        
+        required = ['amount', 'category', 'frequency', 'start_date', 'next_due_date']
+        for field in required:
+            if field not in data:
+                return jsonify({'success': False, 'error': f'Missing field: {field}'}), 400
+        
+        recurring = RecurringExpense(
+            amount=float(data['amount']),
+            category=data['category'],
+            merchant=data.get('merchant', ''),
+            frequency=data['frequency'],
+            start_date=datetime.strptime(data['start_date'], '%Y-%m-%d').date(),
+            next_due_date=datetime.strptime(data['next_due_date'], '%Y-%m-%d').date(),
+            end_date=datetime.strptime(data['end_date'], '%Y-%m-%d').date() if data.get('end_date') else None,
+            auto_add=data.get('auto_add', True),
+            is_active=True
+        )
+        
+        db.session.add(recurring)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Recurring expense added successfully',
+            'id': recurring.id
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/recurring/list', methods=['GET'])
+def get_recurring_expenses():
+    """Get all active recurring expenses"""
+    try:
+        recurring = RecurringExpense.query.filter_by(is_active=True).all()
+        return jsonify({
+            'success': True,
+            'recurring': [r.to_dict() for r in recurring]
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/recurring/delete/<int:id>', methods=['DELETE'])
+def delete_recurring_expense(id):
+    """Delete a recurring expense"""
+    try:
+        recurring = RecurringExpense.query.get(id)
+        if not recurring:
+            return jsonify({'success': False, 'error': 'Not found'}), 404
+        
+        db.session.delete(recurring)
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'Deleted successfully'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/recurring/toggle/<int:id>', methods=['POST'])
+def toggle_recurring_expense(id):
+    """Toggle active status of recurring expense"""
+    try:
+        recurring = RecurringExpense.query.get(id)
+        if not recurring:
+            return jsonify({'success': False, 'error': 'Not found'}), 404
+        
+        recurring.is_active = not recurring.is_active
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'is_active': recurring.is_active,
+            'message': 'Status updated'
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/recurring/process-now', methods=['POST'])
+def process_recurring_now():
+    """Manually trigger recurring expense processing (for testing)"""
+    process_recurring_expenses()
+    return jsonify({'success': True, 'message': 'Recurring expenses processed'})
+
 # ---------------- HEALTH CHECK ----------------
 @app.route("/health", methods=["GET"])
 def health_check():
-    """Lightweight liveness probe for deployment environments (Docker, Railway, etc.)."""
+    """Lightweight liveness probe for deployment environments."""
     return jsonify({"status": "ok", "service": "AI Money Mentor"}), 200
 
 @app.route("/dashboard-data")
@@ -394,7 +639,6 @@ def dashboard_data():
             k: round(v * 100 / total, 2)
             for k, v in allocation.items()
         } if total > 0 else {}
-
 
         return jsonify({
             "net_worth": net_worth,
@@ -468,14 +712,10 @@ def recent_activity():
 
     return jsonify(activities[:10])
 
-# ---------------- AI STATUS (Issue #218) ----------------
+# ---------------- AI STATUS ----------------
 @app.route("/api/status", methods=["GET"])
 def ai_status():
-    """
-    Reports whether the Groq AI client is available.
-    The frontend can call this on page load to show/hide AI-dependent UI
-    and display an informative offline banner instead of a confusing error.
-    """
+    """Reports whether the Groq AI client is available."""
     if client is not None:
         return jsonify({
             "ai_online": True,
@@ -483,13 +723,8 @@ def ai_status():
         })
     return jsonify({
         "ai_online": False,
-        "message": (
-            "AI features are unavailable — GROQ_API_KEY is not configured. "
-            "Set GROQ_API_KEY in your .env file to enable AI features."
-        )
+        "message": "AI features are unavailable — GROQ_API_KEY is not configured."
     })
-
-
 
 # ---------------- ERROR HANDLERS ----------------
 @app.errorhandler(ValidationError)
@@ -510,7 +745,6 @@ def bad_request(error):
 
 @app.errorhandler(404)
 def not_found(error):
-    # Return HTML page for browser navigation, JSON for API clients
     if request.accept_mimetypes.accept_html and not request.accept_mimetypes.accept_json:
         return render_template("404.html", active_page=None), 404
     return jsonify({
@@ -535,67 +769,75 @@ def internal_server_error(error):
         "status_code": 500
     }), 500
 
-# ---------------- 🤖 AI CHAT ----------------
-@app.route("/chat", methods=["GET", "POST"])
+# ---------------- 🤖 AI CHAT WITH SAFETY ENGINE ----------------
+@app.route("/chat", methods=["POST"])
 def chat():
-    if request.method == "GET":
-        return render_template("chat.html", active_page="chat")
     try:
-        if client is None:
-            return jsonify({
-                "reply": "AI Money Mentor is offline because GROQ_API_KEY is not configured. Please set GROQ_API_KEY in your env/config files."
-            })
+        data = request.json
+        msg = data.get("message")
+        history = data.get("history", [])
 
-        data = request.json or {}
-        if not isinstance(data, dict):
-            raise ValidationError("Request body must be a JSON object")
-        msg = validate_string(data.get("message"), "message")
-        history = validate_history(data.get("history"))
+        # Get user context from database
+        user_context = {}
+        if current_user.is_authenticated:
+            # Fetch user's financial data
+            expenses = Expense.query.filter_by(user_id=current_user.id).all()
+            assets = Asset.query.filter_by(user_id=current_user.id).all()
+            
+            user_context = {
+                'income': 80000,  # TODO: Fetch from user profile
+                'expenses': sum(e.amount for e in expenses) if expenses else 0,
+                'savings': sum(a.amount for a in assets) if assets else 0,
+                'investments': 500000,
+                'debt': 100000,
+                'emergency': 240000
+            }
 
+        # Stronger system prompt to prevent hallucinations
+        system_prompt = """You are a professional financial advisor for Indian users.
 
-        messages = [{"role": "system", "content": "You are a financial advisor for India."}]
+CRITICAL RULES - YOU MUST FOLLOW:
+1. NEVER invent numbers, amounts, or financial data about the user.
+2. If you don't know the user's income, savings, or expenses, ASK for that information.
+3. If the user asks for advice without providing data, give general methodology only.
+4. Always be honest about what you don't know.
+5. Provide practical, actionable advice based ONLY on information the user has shared.
 
-        # Build messages: system prompt + last 10 history turns + current message
-        system_prompt = (
-            "You are an expert AI financial advisor for Indian users.\n\n"
-            "Your job:\n"
-            "- Help users manage money smartly\n"
-            "- Teach budgeting, saving, and investing\n"
-            "- Give simple, practical, real-life advice\n\n"
-            "Response rules:\n"
-            "- Always use structured format:\n"
-            "Income / Situation Summary:\n"
-            "- ...\n"
-            "Budget Breakdown (if applicable):\n"
-            "- Needs: 50%\n"
-            "- Wants: 30%\n"
-            "- Savings: 20%\n"
-            "Advice:\n"
-            "- Give clear steps\n"
-            "- Keep it simple and actionable\n\n"
-            "Tone:\n"
-            "- Friendly, practical, and easy to understand"
-        )
+Be friendly, supportive, and encouraging."""
+
         messages = [{"role": "system", "content": system_prompt}]
-
-        messages += history[-10:]
+        
+        if history:
+            messages += history[-10:]
         messages.append({"role": "user", "content": msg})
 
         res = client.chat.completions.create(
             model="llama-3.1-8b-instant",
-            messages=messages
+            messages=messages,
+            temperature=0.7,
+            max_tokens=500
         )
 
+        reply = res.choices[0].message.content
+        
+        # Process through safety engine
+        safety_result = safety_engine.process_response(reply, user_context)
+        
         return jsonify({
-            "reply": res.choices[0].message.content
+            "reply": safety_result['safe_response'],
+            "safety": {
+                "passed": safety_result['passed'],
+                "confidence_score": safety_result['confidence_score'],
+                "confidence_level": safety_result['confidence_level'],
+                "violations": safety_result['violations'],
+                "warnings": safety_result['warnings']
+            }
         })
 
-    except ValidationError as e:
-        raise e
     except Exception as e:
-        app.logger.error(f"Groq API Error: {str(e)}")
+        app.logger.error(f"Chat error: {e}")
         return jsonify({
-            "reply": "Unable to generate a response at the moment. Please try again later."
+            "reply": "⚠️ I'm having trouble connecting. Please try again in a moment."
         }), 500
 
 # ---------------- 💸 SIP ----------------
@@ -624,7 +866,6 @@ def sip():
         raise e
     except Exception as e:
         return jsonify({"error": str(e)}), 400
-
 
 # ---------------- 🎯 GOAL-BASED SAVINGS PLANNER ----------------
 @app.route("/goal-planner", methods=["GET", "POST"])
@@ -663,10 +904,6 @@ def portfolio():
     except ValidationError as e:
         raise e
     except Exception as e:
-
-        return jsonify({"error": str(e)})
-
-
         return jsonify({"error": str(e)}), 400
 
 @app.route("/api/alerts", methods=["GET"])
@@ -700,15 +937,9 @@ def create_alert():
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
-
 @app.route("/api/alerts/history", methods=["GET"])
 @login_required
 def alerts_history():
-    """
-    Returns latest N alert trigger events.
-    Query params:
-      - limit (default 10, max 100)
-    """
     try:
         user_alert_ids = [a.id for a in PriceAlert.query.filter_by(user_id=current_user.id).all()]
         limit = request.args.get("limit", default=10, type=int)
@@ -717,51 +948,24 @@ def alerts_history():
         if limit > 100:
             limit = 100
 
-        events = (
-        PriceAlertEvent.query
-        .filter(PriceAlertEvent.alert_id.in_(user_alert_ids))
-        .order_by(PriceAlertEvent.triggered_at.desc())
-        .limit(limit)
-        .all()
-        )
-
+        events = PriceAlertEvent.query.filter(PriceAlertEvent.alert_id.in_(user_alert_ids)).order_by(PriceAlertEvent.triggered_at.desc()).limit(limit).all()
         return jsonify([e.to_dict() for e in events])
     except Exception as e:
         return jsonify({"error": str(e)}), 400
-
 
 @app.route("/api/alerts/reset", methods=["POST"])
 @login_required
 def alerts_reset():
     try:
-        PriceAlert.query.filter_by(
-            user_id=current_user.id
-        ).update(
-            {
-                "is_triggered": False,
-                "last_triggered_at": None,
-                "last_check_error": None,
-            }
-        )
-
-        user_alert_ids = [
-            a.id for a in PriceAlert.query.filter_by(
-                user_id=current_user.id
-            ).all()
-        ]
-
+        PriceAlert.query.filter_by(user_id=current_user.id).update({"is_triggered": False, "last_triggered_at": None, "last_check_error": None})
+        user_alert_ids = [a.id for a in PriceAlert.query.filter_by(user_id=current_user.id).all()]
         if user_alert_ids:
-            PriceAlertEvent.query.filter(
-                PriceAlertEvent.alert_id.in_(user_alert_ids)
-            ).delete(synchronize_session=False)
-
+            PriceAlertEvent.query.filter(PriceAlertEvent.alert_id.in_(user_alert_ids)).delete(synchronize_session=False)
         db.session.commit()
-
         return jsonify({"status": "success"})
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 400
-    
 
 @app.route("/api/alerts/<int:alert_id>", methods=["DELETE"])
 @login_required
@@ -775,7 +979,6 @@ def delete_alert(alert_id):
         return jsonify({"status": "success", "message": "Alert deleted successfully"})
     except Exception as e:
         return jsonify({"error": str(e)}), 400
-    
 
 # ---------------- 💸 TAX ----------------
 @app.route("/tax", methods=["GET", "POST"])
@@ -791,29 +994,27 @@ def tax():
         deduction_80d = validate_float(data.get("deduction_80d", 0.0), "deduction_80d", min_val=0.0)
         deduction_hra = validate_float(data.get("deduction_hra", 0.0), "deduction_hra", min_val=0.0)
         
-        tax_details = calculate_tax(
-            income,
-            deduction_80c=deduction_80c,
-            deduction_80d=deduction_80d,
-            deduction_hra=deduction_hra
-        )
+        hra_inputs = data.get("hra_inputs")
+        if hra_inputs is not None:
+            if not isinstance(hra_inputs, dict):
+                raise ValidationError("'hra_inputs' must be a dictionary")
+            hra_inputs = {
+                "basic_salary": validate_float(hra_inputs.get("basic_salary", 0.0), "hra_inputs.basic_salary", min_val=0.0),
+                "rent_paid": validate_float(hra_inputs.get("rent_paid", 0.0), "hra_inputs.rent_paid", min_val=0.0),
+                "hra_received": validate_float(hra_inputs.get("hra_received", 0.0), "hra_inputs.hra_received", min_val=0.0),
+                "is_metro": bool(hra_inputs.get("is_metro", False))
+            }
+
+        tax_details = calculate_tax(income, deduction_80c=deduction_80c, deduction_80d=deduction_80d, deduction_hra=deduction_hra, hra_inputs=hra_inputs)
         
-        # AI Tax-saving advice
         recommendations = "You are already in the zero-tax bracket! No additional tax-saving investments are required."
         
         recommended_regime = tax_details.get("recommended", "New Regime")
         regime_key = "new_regime" if recommended_regime == "New Regime" else "old_regime"
         total_tax = tax_details.get(regime_key, {}).get("total_tax", 0.0)
         
-        # Only query AI if there is actual tax payable and client is available
         if total_tax > 0.0 and client:
-            prompt = (
-                f"A user in India has a gross annual income of ₹{income:,} and has a total tax liability of "
-                f"₹{total_tax:,} under the recommended {recommended_regime}.\n\n"
-                f"Generate a customized list of tax-saving investment recommendations for them. "
-                f"Suggest specific options under Section 80C (up to 1.5L, e.g. ELSS, PPF), Section 80CCD(1B) (up to 50k in NPS), "
-                f"and Section 80D (Health Insurance). Be brief and format the response as a bulleted list with clear estimated tax savings."
-            )
+            prompt = f"A user in India has a gross annual income of ₹{income:,} and has a total tax liability of ₹{total_tax:,} under the recommended {recommended_regime}.\n\nGenerate a customized list of tax-saving investment recommendations for them. Suggest specific options under Section 80C (up to 1.5L, e.g. ELSS, PPF), Section 80CCD(1B) (up to 50k in NPS), and Section 80D (Health Insurance). Be brief and format the response as a bulleted list with clear estimated tax savings."
             
             try:
                 ai_res = client.chat.completions.create(
@@ -838,7 +1039,6 @@ def tax():
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
-
 @app.route("/tax/simulate", methods=["POST"])
 def tax_simulate():
     try:
@@ -859,24 +1059,28 @@ def tax_simulate():
         scenario_a_d80c = validate_float(scenario_a.get("deduction_80c", 0.0), "scenario_a.deduction_80c", min_val=0.0)
         scenario_a_d80d = validate_float(scenario_a.get("deduction_80d", 0.0), "scenario_a.deduction_80d", min_val=0.0)
         scenario_a_hra = validate_float(scenario_a.get("deduction_hra", 0.0), "scenario_a.deduction_hra", min_val=0.0)
-
+        
         scenario_b_d80c = validate_float(scenario_b.get("deduction_80c", 0.0), "scenario_b.deduction_80c", min_val=0.0)
         scenario_b_d80d = validate_float(scenario_b.get("deduction_80d", 0.0), "scenario_b.deduction_80d", min_val=0.0)
         scenario_b_hra = validate_float(scenario_b.get("deduction_hra", 0.0), "scenario_b.deduction_hra", min_val=0.0)
 
-        result = simulate_tax_scenarios(
-            income,
-            scenario_a={
-                "deduction_80c": scenario_a_d80c,
-                "deduction_80d": scenario_a_d80d,
-                "deduction_hra": scenario_a_hra,
-            },
-            scenario_b={
-                "deduction_80c": scenario_b_d80c,
-                "deduction_80d": scenario_b_d80d,
-                "deduction_hra": scenario_b_hra,
-            },
-        )
+        def validate_hra_inputs(sc_data, sc_name):
+            hra_inputs = sc_data.get("hra_inputs")
+            if hra_inputs is None:
+                return None
+            if not isinstance(hra_inputs, dict):
+                raise ValidationError(f"'{sc_name}.hra_inputs' must be a dictionary")
+            return {
+                "basic_salary": validate_float(hra_inputs.get("basic_salary", 0.0), f"{sc_name}.hra_inputs.basic_salary", min_val=0.0),
+                "rent_paid": validate_float(hra_inputs.get("rent_paid", 0.0), f"{sc_name}.hra_inputs.rent_paid", min_val=0.0),
+                "hra_received": validate_float(hra_inputs.get("hra_received", 0.0), f"{sc_name}.hra_inputs.hra_received", min_val=0.0),
+                "is_metro": bool(hra_inputs.get("is_metro", False))
+            }
+
+        scenario_a_hra_inputs = validate_hra_inputs(scenario_a, "scenario_a")
+        scenario_b_hra_inputs = validate_hra_inputs(scenario_b, "scenario_b")
+
+        result = simulate_tax_scenarios(income, scenario_a={"deduction_80c": scenario_a_d80c, "deduction_80d": scenario_a_d80d, "deduction_hra": scenario_a_hra, "hra_inputs": scenario_a_hra_inputs}, scenario_b={"deduction_80c": scenario_b_d80c, "deduction_80d": scenario_b_d80d, "deduction_hra": scenario_b_hra, "hra_inputs": scenario_b_hra_inputs})
 
         # Deterministic explanation always available
         best_regime_a = result["comparison"]["best_regime"]["scenario_a"]
@@ -884,7 +1088,6 @@ def tax_simulate():
         switch_savings_new = float(result["comparison"]["switch"]["new_regime"]["savings"])
         switch_savings_old = float(result["comparison"]["switch"]["old_regime"]["savings"])
 
-        # pick regime under which switching A->B saves more (deterministic)
         if switch_savings_new >= switch_savings_old and switch_savings_new > 0:
             regime_for_explanation = "New Regime"
         elif switch_savings_old > 0:
@@ -892,32 +1095,13 @@ def tax_simulate():
         else:
             regime_for_explanation = result["comparison"]["best_scenario_by_savings_under_recommended_regime"]
 
-        # Build deterministic lever explanation from sensitivity rankings for the best regime of scenario B
         scenario_b_best = best_regime_b
         lever_ranking = result["sensitivity"]["scenario_b"]["lever_ranking_for_best_regime"]
 
-        deterministic_explanation = (
-            f"Regime outcome: Scenario A is better under {best_regime_a}, while Scenario B is better under {best_regime_b}. "
-            f"Under {scenario_b_best}, the biggest tax lever tends to be: {lever_ranking[0]['lever']} "
-            f"(≈ {abs(lever_ranking[0]['delta_per_1']):.2f} tax change per ₹1). "
-        )
+        deterministic_explanation = f"Regime outcome: Scenario A is better under {best_regime_a}, while Scenario B is better under {best_regime_b}. Under {scenario_b_best}, the biggest tax lever tends to be: {lever_ranking[0]['lever']} (≈ {abs(lever_ranking[0]['delta_per_1']):.2f} tax change per ₹1). "
 
         if client:
-            # AI explanation prompt (use computed deltas + savings)
-            prompt = (
-                f"User wants to compare tax scenarios in India.\n\n"
-                f"Income: ₹{result['income']:.0f}\n\n"
-                f"Scenario A recommended regime: {best_regime_a}\n"
-                f"Scenario B recommended regime: {best_regime_b}\n\n"
-                f"Switching A -> B savings:\n"
-                f"- New regime savings: ₹{switch_savings_new:.2f}\n"
-                f"- Old regime savings: ₹{switch_savings_old:.2f}\n\n"
-                f"Sensitivity (Scenario B, per ₹1 increase):\n"
-                f"{lever_ranking}\n\n"
-                f"Explain in simple terms why the winning regime is likely to be {best_regime_b} "
-                f"and which levers (80C/80D/HRA) give the biggest savings. "
-                f"Use bullet points and keep it under 8 lines."
-            )
+            prompt = f"User wants to compare tax scenarios in India.\n\nIncome: ₹{result['income']:.0f}\n\nScenario A recommended regime: {best_regime_a}\nScenario B recommended regime: {best_regime_b}\n\nSwitching A -> B savings:\n- New regime savings: ₹{switch_savings_new:.2f}\n- Old regime savings: ₹{switch_savings_old:.2f}\n\nSensitivity (Scenario B, per ₹1 increase):\n{lever_ranking}\n\nExplain in simple terms why the winning regime is likely to be {best_regime_b} and which levers (80C/80D/HRA) give the biggest savings. Use bullet points and keep it under 8 lines."
             try:
                 ai_res = client.chat.completions.create(
                     model="llama-3.1-8b-instant",
@@ -958,14 +1142,10 @@ def upload():
 @app.route("/agent", methods=["POST"])
 def run_agent_route():
     if not client:
-        return jsonify({
-            "error": "AI Agent is offline: GROQ_API_KEY is not configured on the server."
-        })
+        return jsonify({"error": "AI Agent is offline: GROQ_API_KEY is not configured on the server."})
     try:
         if client is None:
-            return jsonify({
-                "error": "AI Multi-Agent is offline because GROQ_API_KEY is not configured. Please set GROQ_API_KEY in your env/config files."
-            })
+            return jsonify({"error": "AI Multi-Agent is offline because GROQ_API_KEY is not configured."})
         data = request.json or {}
         if not isinstance(data, dict):
             raise ValidationError("Request body must be a JSON object")
@@ -1017,29 +1197,61 @@ def money_score():
         return jsonify({"error": str(e)}), 400
 
 
+# ---------------- CREDIT HEALTH FEEDBACK ----------------
+@app.route("/credit-feedback", methods=["POST"])
+def credit_feedback():
+
+    try:
+        data = request.json or {}
+
+        score = data.get("score", 0)
+        dti = data.get("dti", 0)
+        utilization = data.get("utilization", 0)
+        payment = data.get("payment", 0)
+
+        advice = []
+
+        if utilization > 30:
+            advice.append(
+                "Reduce credit utilization below 30%."
+            )
+
+        if dti > 40:
+            advice.append(
+                "Lower your debt-to-income ratio."
+            )
+
+        if payment < 90:
+            advice.append(
+                "Maintain timely payments to improve credit history."
+            )
+
+        if score >= 750:
+            advice.append(
+                "Excellent credit profile. Maintain your habits."
+            )
+
+        if not advice:
+            advice.append(
+                "Keep monitoring your credit health regularly."
+            )
+
+        return jsonify({
+            "message": " ".join(advice)
+        })
+
+    except Exception as e:
+        return jsonify({
+            "error": str(e)
+        }), 400
+
+
 # ---------------- EXPORT FINANCIAL REPORT ----------------
-EXPORT_FIELDS = [
-    "income", "expenses", "savings", "investments",
-    "debt", "emergency", "tax", "money_score", "sip_projection",
-]
-
-EXPORT_FIELD_LABELS = {
-    "income": "Income",
-    "expenses": "Expenses",
-    "savings": "Savings",
-    "investments": "Investments",
-    "debt": "Debt",
-    "emergency": "Emergency Fund",
-    "tax": "Tax Estimate",
-    "money_score": "Money Score",
-    "sip_projection": "SIP Projection",
-}
-
+EXPORT_FIELDS = ["income", "expenses", "savings", "investments", "debt", "emergency", "tax", "money_score", "sip_projection"]
+EXPORT_FIELD_LABELS = {"income": "Income", "expenses": "Expenses", "savings": "Savings", "investments": "Investments", "debt": "Debt", "emergency": "Emergency Fund", "tax": "Tax Estimate", "money_score": "Money Score", "sip_projection": "SIP Projection"}
 
 def _pdf_safe(value):
-    """Strip characters (e.g. ₹, emoji) that core PDF fonts can't encode."""
     return str(value).replace("₹", "Rs. ").encode("latin-1", "ignore").decode("latin-1")
-
 
 @app.route("/export/csv", methods=["POST"])
 def export_csv():
@@ -1056,7 +1268,6 @@ def export_csv():
         return response
     except Exception as e:
         return jsonify({"error": str(e)}), 400
-
 
 @app.route("/export/pdf", methods=["POST"])
 def export_pdf():
@@ -1110,8 +1321,10 @@ def add_expense():
             category=category,
             amount=amount,
             date=date,
+            merchant=data.get("merchant", ""),
             user_id=current_user.id
         )
+
         db.session.add(expense)
         db.session.commit()
  
@@ -1344,8 +1557,8 @@ def disable_recurring_expense(recurring_id):
 def get_net_worth():
     assets = Asset.query.filter_by(user_id=current_user.id).order_by(Asset.id).all()
     liabilities = Liability.query.filter_by(user_id=current_user.id).order_by(Liability.id).all()
-    assets_data = [a.to_dict() for i, a in enumerate(assets)]
-    liabilities_data = [l.to_dict() for i, l in enumerate(liabilities)]
+    assets_data = [a.to_dict() for a in assets]
+    liabilities_data = [l.to_dict() for l in liabilities]
     total_assets = sum(item['amount'] for item in assets_data)
     total_liabilities = sum(item['amount'] for item in liabilities_data)
     return jsonify({
@@ -1369,10 +1582,7 @@ def add_asset():
         if date:
             date = validate_string(date, "date")
         
-        asset = Asset()
-        asset.name = name
-        asset.amount = amount
-        asset.user_id = current_user.id
+        asset = Asset(name=name, amount=amount, user_id=current_user.id)
         if date:
             asset.date = date
         db.session.add(asset)
@@ -1396,10 +1606,7 @@ def add_liability():
         if date:
             date = validate_string(date, "date")
         
-        liability = Liability()
-        liability.name = name
-        liability.amount = amount
-        liability.user_id = current_user.id
+        liability = Liability(name=name, amount=amount, user_id=current_user.id)
         if date:
             liability.date = date
         db.session.add(liability)
@@ -1410,19 +1617,10 @@ def add_liability():
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
-@app.route("/delete-item", methods=["DELETE"])
+@app.route("/delete-item", methods=["POST", "DELETE"])
 @login_required
 def delete_item():
     try:
-
-        data = request.json
-        item_type = data["type"]
-        item_id = int(data["id"])
-
-        if item_type == 'asset':
-            rows = Asset.query.order_by(Asset.id).all()
-            db.session.delete(rows[item_id])
-
         data = request.json or {}
         if not isinstance(data, dict):
             raise ValidationError("Request body must be a JSON object")
@@ -1477,26 +1675,20 @@ def run_threshold_checks(user_id, category, year_month=None):
                 threshold=threshold
             ).first()
             if not exists:
-                alert = BudgetAlert()
-                alert.category = category
-                alert.year_month = year_month
-                alert.threshold = threshold
-                alert.user_id = user_id
+                alert = BudgetAlert(
+                    category=category,
+                    year_month=year_month,
+                    threshold=threshold,
+                    user_id=user_id
+                )
                 db.session.add(alert)
                 triggered.append(threshold)
-                print(
-                    f"\n[EMAIL ALERT] To: user@example.com\n"
-                    f"Subject: Budget Alert: {category} spending reached {threshold}%\n"
-                    f"Body: You have spent ₹{total_spent:.2f} of your ₹{limit.limit_amount:.2f} limit in category '{category}'.\n",
-                    file=sys.stderr
-                )
+                print(f"\n[EMAIL ALERT] Budget Alert: {category} spending reached {threshold}%\n", file=sys.stderr)
     if triggered:
         db.session.commit()
     return triggered
 
-
 # ---------------- SMART BUDGET ALERTS ----------------
-
 @app.route("/budget/limits", methods=["GET", "POST"])
 @login_required
 def budget_limits():
@@ -1566,17 +1758,13 @@ def budget_alerts():
     alerts = BudgetAlert.query.filter_by(user_id=current_user.id).order_by(BudgetAlert.triggered_at.desc()).limit(10).all()
     return jsonify([a.to_dict() for a in alerts])
 
-
-# Delete a budget limit by ID (Issue #179)
 @app.route("/budget/limits/<int:limit_id>", methods=["DELETE"])
 @login_required
 def delete_budget_limit(limit_id):
-    """Remove a category budget limit and its associated alerts."""
     try:
         limit = BudgetLimit.query.filter_by(id=limit_id, user_id=current_user.id).first()
         if not limit:
             return jsonify({"error": f"Budget limit with id {limit_id} not found."}), 404
-        # Remove any alerts tied to this category before deleting the limit
         BudgetAlert.query.filter_by(user_id=current_user.id, category=limit.category).delete(synchronize_session="fetch")
         db.session.delete(limit)
         db.session.commit()
@@ -1584,28 +1772,19 @@ def delete_budget_limit(limit_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
-
 # ---------------- FINANCIAL GOALS TRACKER ----------------
 def _months_diff(start_dt, end_dt):
     return (end_dt.year - start_dt.year) * 12 + (end_dt.month - start_dt.month)
 
-
 def _ym_add_months(base_dt, months):
-    # base_dt is a datetime; normalize to first day
     year = base_dt.year + (base_dt.month - 1 + months) // 12
     month = (base_dt.month - 1 + months) % 12 + 1
     return year, month
 
-
 def compute_monthly_milestones(goal):
-    """Compute milestones as an even split across months until goal.target_date.
-
-    Returns list of dicts: [{month, target_amount_for_month, status}]
-    """
     from datetime import datetime
 
     remaining = float(goal.target_amount) - float(goal.current_amount)
-    # If already reached/exceeded, all milestones become 0 and marked completed.
     if remaining <= 0:
         target_dt = datetime.strptime(goal.target_date, "%Y-%m")
         now = datetime.now()
@@ -1634,7 +1813,6 @@ def compute_monthly_milestones(goal):
     if months_remaining <= 0:
         months_remaining = 1
 
-    # Even split with rounding correction on the last month.
     base = remaining / months_remaining
     amounts = [round(base, 2) for _ in range(months_remaining)]
     total_alloc = round(sum(amounts), 2)
@@ -1652,7 +1830,6 @@ def compute_monthly_milestones(goal):
 
     return milestones
 
-
 def persist_goal_milestones(goal, milestones):
     FinancialGoalMilestone.query.filter_by(goal_id=goal.id).delete(synchronize_session=False)
     for ms in milestones:
@@ -1663,7 +1840,6 @@ def persist_goal_milestones(goal, milestones):
             status=ms["status"],
         ))
     db.session.commit()
-
 
 @app.route("/goals", methods=["GET", "POST"])
 @login_required
@@ -1698,8 +1874,6 @@ def goals():
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
-
-
 @app.route("/goals/<int:goal_id>", methods=["PUT", "DELETE"])
 @login_required
 def goal_detail(goal_id):
@@ -1709,7 +1883,6 @@ def goal_detail(goal_id):
             return jsonify({"error": "Goal not found"}), 404
 
         if request.method == "DELETE":
-            # Delete milestones first
             FinancialGoalMilestone.query.filter_by(goal_id=goal.id).delete(synchronize_session=False)
             db.session.delete(goal)
             db.session.commit()
@@ -1737,8 +1910,6 @@ def goal_detail(goal_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
-
-
 @app.route("/api/goals", methods=["GET"])
 @login_required
 def get_goals():
@@ -1746,14 +1917,12 @@ def get_goals():
         goals = FinancialGoal.query.filter_by(user_id=current_user.id).order_by(FinancialGoal.created_at.desc()).all()
         goals_list = [g.to_dict() for g in goals]
 
-        # Add AI recommendations if available
         ai_recommendations = {}
         if client and len(goals_list) > 0:
             for goal in goals_list:
                 remaining = goal["target_amount"] - goal["current_amount"]
                 if remaining > 0:
                     try:
-                        # Calculate monthly savings needed
                         from datetime import datetime
                         target_dt = datetime.strptime(goal["target_date"], "%Y-%m")
                         now = datetime.now()
@@ -1787,10 +1956,7 @@ def get_goals():
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
-
 # ---------------- SCHEDULER ----------------
-from apscheduler.schedulers.background import BackgroundScheduler
-
 def check_all_budgets_job():
     with app.app_context():
         import datetime
@@ -1800,15 +1966,9 @@ def check_all_budgets_job():
             run_threshold_checks(limit.user_id, limit.category, ym)
 
 def check_stock_alerts_job():
-    """
-    Poll stock prices for active alerts and persist:
-    - last_check_error diagnostics on the PriceAlert row
-    - PriceAlertEvent row on trigger, storing snapshot price + timestamp
-    """
     with app.app_context():
         alerts = PriceAlert.query.filter_by(is_triggered=False).all()
 
-        # Basic retry/backoff for flaky yfinance / network issues
         max_retries = 3
         base_delay_sec = 1.0
 
@@ -1819,7 +1979,6 @@ def check_stock_alerts_job():
             for attempt in range(max_retries):
                 try:
                     res = get_stock_price(alert.symbol)
-                    # get_stock_price returns {"error": "..."} on failure
                     if res and isinstance(res, dict) and "price" in res and "error" not in res:
                         last_err = None
                         break
@@ -1830,12 +1989,9 @@ def check_stock_alerts_job():
                 except Exception as e:
                     last_err = str(e)
 
-                # backoff before next attempt
-                time_to_sleep = base_delay_sec * (2 ** attempt)
                 import time as _time
-                _time.sleep(time_to_sleep)
+                _time.sleep(base_delay_sec * (2 ** attempt))
 
-            # Persist diagnostics even if not triggered
             alert.last_check_error = last_err
 
             if res and isinstance(res, dict) and "price" in res and "error" not in res:
@@ -1860,23 +2016,11 @@ def check_stock_alerts_job():
                     )
                     db.session.add(event)
 
-                    print(
-                        f"\n[STOCK ALERT] Triggered for {alert.symbol}\n"
-                        f"Condition: {alert.condition} {alert.target_price}\n"
-                        f"Current Price: {current_price}\n",
-                        file=sys.stderr
-                    )
+                    print(f"\n[STOCK ALERT] Triggered for {alert.symbol}\n", file=sys.stderr)
 
         db.session.commit()
 
-
 def check_all_recurring_expenses_job():
-    """
-    Daily recurring-expense scheduler:
-    - For each active RecurringExpense, generate an Expense occurrence for the current period
-      (monthly/weekly/yearly).
-    - Insert Expense row only once per period (duplicate guard using Expense.merchant_name).
-    """
     with app.app_context():
         import datetime
 
@@ -1896,14 +2040,12 @@ def check_all_recurring_expenses_job():
             period_key = _get_period_key(rexp.frequency, today)
             merchant_key = f"recurring_expense:{rexp.id}:{period_key}"
 
-            # duplicate guard (same template + same period)
             exists = Expense.query.filter_by(merchant_name=merchant_key).first()
             if exists:
                 continue
 
             occ_date = today.strftime("%Y-%m-%d")
             exp = Expense(
-                user_id=rexp.user_id,
                 category=rexp.category,
                 amount=rexp.amount,
                 date=occ_date,
@@ -1914,8 +2056,7 @@ def check_all_recurring_expenses_job():
 
         db.session.commit()
 
-from utils.tax import calculate_tax, tax_optimization_module
-
+# Tax Optimization Module
 @app.route("/tax-optimize", methods=["POST"])
 def tax_optimize():
     data = request.get_json()
@@ -1928,6 +2069,7 @@ def tax_optimize():
     return jsonify(result)
 
 
+# ---------------- ADDITIONAL SCHEDULERS ----------------
 if not app.debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true":
     scheduler = BackgroundScheduler()
     scheduler.add_job(check_all_budgets_job, 'interval', days=1)
@@ -1938,5 +2080,9 @@ if not app.debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true":
 # ---------------- RUN ----------------
 if __name__ == "__main__":
     debug_mode = os.getenv("FLASK_DEBUG", "False").lower() in ("true", "1", "yes")
+
     app.run(debug=debug_mode)
+
+    app.run(host="0.0.0.0", port=5000, debug=True)
+
 

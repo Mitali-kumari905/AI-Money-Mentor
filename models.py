@@ -11,6 +11,39 @@ from flask_login import UserMixin
 
 db = SQLAlchemy()
 
+class RecurringExpense(db.Model):
+    """Model for recurring expenses"""
+    __tablename__ = 'recurring_expenses'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, default=1)  # For now, single user
+    amount = db.Column(db.Float, nullable=False)
+    category = db.Column(db.String(50), nullable=False)
+    merchant = db.Column(db.String(100))
+    frequency = db.Column(db.String(20), nullable=False)  # daily, weekly, monthly, quarterly, yearly
+    start_date = db.Column(db.Date, nullable=False)
+    next_due_date = db.Column(db.Date, nullable=False)
+    end_date = db.Column(db.Date, nullable=True)
+    auto_add = db.Column(db.Boolean, default=True)  # Auto-add vs Ask before adding
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    last_processed = db.Column(db.Date, nullable=True)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'amount': self.amount,
+            'category': self.category,
+            'merchant': self.merchant,
+            'frequency': self.frequency,
+            'start_date': self.start_date.isoformat() if self.start_date else None,
+            'next_due_date': self.next_due_date.isoformat() if self.next_due_date else None,
+            'end_date': self.end_date.isoformat() if self.end_date else None,
+            'auto_add': self.auto_add,
+            'is_active': self.is_active
+        }
+
+
 class User(UserMixin, db.Model):
     __tablename__ = "users"
 
@@ -32,6 +65,7 @@ class User(UserMixin, db.Model):
         db.String(255),
         nullable=False
     )
+
 
 class Portfolio(db.Model):
     __tablename__ = "portfolio"
@@ -253,56 +287,6 @@ class FinancialGoal(db.Model):
             "user_id": self.user_id
         }
 
-class FinancialGoalMilestone(db.Model):
-    __tablename__ = "financial_goal_milestones"
-    id = db.Column(db.Integer, primary_key=True)
-    goal_id = db.Column(db.Integer, db.ForeignKey("financial_goals.id"), nullable=False, index=True)
-    month = db.Column(db.String(7), nullable=False)  # YYYY-MM
-    target_amount_for_month = db.Column(db.Float, nullable=False, default=0.0)
-    status = db.Column(db.String(20), nullable=False, default="planned")  # planned|completed
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "goal_id": self.goal_id,
-            "month": self.month,
-            "target_amount_for_month": self.target_amount_for_month,
-            "status": self.status,
-        }
-
-class RecurringExpense(db.Model):
-    __tablename__ = "recurring_expenses"
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-    user = db.relationship("User", backref="recurring_expenses")
-    id = db.Column(db.Integer, primary_key=True)
-    category = db.Column(db.String(120), nullable=False)
-    amount = db.Column(db.Float, nullable=False)
-
-    # Stored as YYYY-MM-DD (strings) to keep the model consistent with existing Expense.date usage
-    start_date = db.Column(db.String(40), nullable=False)
-
-    frequency = db.Column(db.String(20), nullable=False)  # monthly|weekly|yearly
-    active = db.Column(db.Boolean, default=True)
-
-    # Optional end date (YYYY-MM-DD)
-    end_date = db.Column(db.String(40), nullable=True)
-
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "category": self.category,
-            "amount": self.amount,
-            "start_date": self.start_date,
-            "frequency": self.frequency,
-            "active": self.active,
-            "end_date": self.end_date,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
-        }
 
 
 # ---------------- WEEKLY DIGEST (Scheduled AI) ----------------
