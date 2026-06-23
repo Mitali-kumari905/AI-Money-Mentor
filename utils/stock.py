@@ -79,6 +79,7 @@ def get_stock_price(symbol):
                 news_data = news
         except Exception:
             pass
+        predicted_tomorrow = predict_stock(symbol)
 
         ret = {
             "symbol": symbol,
@@ -185,8 +186,8 @@ def predict_stock(symbol):
     try:
       predicted_return=model.predict(X_live)[0]
       predicted_tomorrow_price = float(today_close * (1 + predicted_return))
-    except:
-        print("There is some error")
+    except Exception as e:
+        print(f"There is some error:{e}")
         predicted_tomorrow_price=0
     return {"Predicted Price":predicted_tomorrow_price}
     
