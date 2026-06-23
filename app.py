@@ -397,13 +397,7 @@ scheduler.add_job(
     replace_existing=True
 )
 
-# SIP due reminders job - Every day at 9:00 AM
-scheduler.add_job(
-    func=check_sip_due_reminders,
-    trigger=CronTrigger(hour=9, minute=0),
-    id='sip_due_reminders_job',
-    replace_existing=True
-)
+
 
 scheduler.start()
 
@@ -753,7 +747,7 @@ def couple_unlink():
 
 @app.route('/api/couple/goals', methods=['GET'])
 @login_required
-def get_goals():
+def get_couple_goals():
     """Get shared goals"""
     try:
         status = couple_manager.get_couple_status(current_user.id)
