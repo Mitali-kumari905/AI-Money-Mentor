@@ -809,6 +809,57 @@ def predictor_status():
         'model_dir': predictor.model_dir
     })   
 
+
+# ---------------- AUTO REBALANCER ----------------
+from utils.auto_rebalancer import AutoRebalancer
+
+@app.route('/rebalancer')
+@login_required
+def rebalancer_page():
+    """Portfolio Rebalancer Page"""
+    return render_template('rebalancer.html', active_page='rebalancer')
+
+@app.route('/api/rebalance/analyze', methods=['POST'])
+@login_required
+def analyze_rebalance():
+    """Analyze portfolio and generate rebalancing recommendations"""
+    try:
+        data = request.json
+        holdings = data.get('holdings', [])
+        target = data.get('target', {})
+        
+        if not holdings:
+            return jsonify({'error': 'No holdings provided'}), 400
+        
+        # Create rebalancer
+        rebalancer = AutoRebalancer(holdings, target)
+        
+        # Get current allocation
+        current_allocation = rebalancer.get_current_allocation()
+        
+        # Check if rebalance needed
+        rebalance = rebalancer.generate_rebalance_trades()
+        
+        # Get market signals
+        market_signals = {}
+        for h in holdings:
+            signal = rebalancer.get_market_signal(h['symbol'])
+            market_signals[h['symbol']] = signal
+        
+        # Get tax harvesting opportunities
+        tax_harvesting = rebalancer.get_tax_harvesting_opportunities()
+        
+        return jsonify({
+            'success': True,
+            'current_allocation': current_allocation,
+            'rebalance': rebalance,
+            'market_signals': market_signals,
+            'tax_harvesting': tax_harvesting
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+        
     # ---------------- FIRE PLANNER ----------------
 from utils.fire_planner import FIREPlanner
 
