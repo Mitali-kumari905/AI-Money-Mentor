@@ -879,3 +879,74 @@ class GoalRecommendation(db.Model):
             'is_applied': self.is_applied,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
+
+# ============================================
+# NOTIFICATION MODELS
+# ============================================
+
+class Notification(db.Model):
+    """User Notification Model"""
+    __tablename__ = 'notifications'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    type = db.Column(db.String(50), nullable=False)  # overspend, anomaly, goal_completed, investment_opportunity, etc.
+    title = db.Column(db.String(100), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    severity = db.Column(db.String(20), default='medium')  # low, medium, high
+    category = db.Column(db.String(50), default='general')  # finance, investment, goal, expense, security
+    is_read = db.Column(db.Boolean, default=False)
+    is_dismissed = db.Column(db.Boolean, default=False)
+    action_url = db.Column(db.String(200), nullable=True)
+    action_label = db.Column(db.String(50), nullable=True)
+    metadata_json = db.Column(db.Text, nullable=True)  # Additional data
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    read_at = db.Column(db.DateTime, nullable=True)
+    dismissed_at = db.Column(db.DateTime, nullable=True)
+    
+    user = db.relationship("User", backref="notifications")
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'type': self.type,
+            'title': self.title,
+            'message': self.message,
+            'severity': self.severity,
+            'category': self.category,
+            'is_read': self.is_read,
+            'is_dismissed': self.is_dismissed,
+            'action_url': self.action_url,
+            'action_label': self.action_label,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'read_at': self.read_at.isoformat() if self.read_at else None,
+            'metadata': json.loads(self.metadata_json) if self.metadata_json else None
+        }
+
+
+class NotificationPreference(db.Model):
+    """User Notification Preferences"""
+    __tablename__ = 'notification_preferences'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    type = db.Column(db.String(50), nullable=False)  # notification type
+    enabled = db.Column(db.Boolean, default=True)
+    email_notification = db.Column(db.Boolean, default=True)
+    push_notification = db.Column(db.Boolean, default=True)
+    in_app_notification = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    user = db.relationship("User", backref="notification_preferences")
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'type': self.type,
+            'enabled': self.enabled,
+            'email_notification': self.email_notification,
+            'push_notification': self.push_notification,
+            'in_app_notification': self.in_app_notification,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
