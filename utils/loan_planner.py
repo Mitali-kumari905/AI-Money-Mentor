@@ -10,12 +10,22 @@ def data_input(principal, rate, time, income):
   emi_calc=emi_calculation(principal, rate, time, income)
   emi=emi_calc.get("EMI",0)
   check=financial_check(emi, income)
-  return {"Loan_Amount":loan_calc.get("Amount",0),
+  metrics={"Loan_Amount":loan_calc.get("Amount",0),
           "Loan_Interest":loan_calc.get("Interest",0),
           "EMI":emi,
           "Net_take_income":emi_calc.get("Net_take_home",0),
           "Ratio":check.get("Ratio",0),
           "Zone":check.get("Zone",0)
+          }
+  advice=financial_advkce(metrics)
+  
+  return {"Loan_Amount":loan_calc.get("Amount",0),
+          "Loan_Interest":loan_calc.get("Interest",0),
+          "EMI":emi,
+          "Net_take_income":emi_calc.get("Net_take_home",0),
+          "Ratio":check.get("Ratio",0),
+          "Zone":check.get("Zone",0),
+          "Advice": advice
   }
 
 def compound_interest_calculation(principal, rate, time):#rate per annum, time in years, amount in rupees
@@ -27,7 +37,7 @@ def emi_calculation(principal, rate, time, income):
   m_rate=rate/12
   m_time=time*12
   try:
-    emi= (principal* m_rate *(1+m_rate/100)**m_time))/(((1+m_rate/100)**m_time)-1)
+    emi= (principal* m_rate/100 *(1+m_rate/100)**m_time)/(((1+m_rate/100)**m_time)-1)
   except Exception as e:
     emi=0
   net=income-emi
