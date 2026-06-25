@@ -54,7 +54,7 @@ def financial_check(emi, income):
   return {"Ratio":ratio,"Zone":zone}
 
 client = Groq(api_key=os.getenv("GROQ_API_KEY", "YOUR_API_KEY"))
-message=data_input(principal, rate, time, income)
+
 
 def financial_advice(message):
     try:
