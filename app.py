@@ -326,6 +326,99 @@ def networth():
 def budget():
     return render_template("budget.html", active_page="budget")
 
+
+# ---------------- DOCUMENT PARSER ----------------
+from utils.document_parser import DocumentParser
+
+document_parser = DocumentParser()
+
+@app.route('/document-parser')
+@login_required
+def document_parser_page():
+    """Document Parser Page"""
+    return render_template('document_parser.html', active_page='document_parser')
+
+@app.route('/api/parser/parse', methods=['POST'])
+@login_required
+def parse_document():
+    """Parse uploaded document"""
+    try:
+        if 'document' not in request.files:
+            return jsonify({'success': False, 'error': 'No file provided'}), 400
+        
+        file = request.files['document']
+        if file.filename == '':
+            return jsonify({'success': False, 'error': 'No file selected'}), 400
+        
+        # Save file temporarily
+        import tempfile
+        import os
+        
+        with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.filename)[1]) as tmp:
+            file.save(tmp.name)
+            tmp_path = tmp.name
+        
+        file_ext = os.path.splitext(file.filename)[1].lower()
+        
+        # Parse based on file type
+        if file_ext in ['.png', '.jpg', '.jpeg']:
+            result = document_parser.extract_from_image(tmp_path)
+        elif file_ext == '.pdf':
+            result = document_parser.extract_from_pdf(tmp_path)
+        else:
+            result = {'success': False, 'error': f'Unsupported file type: {file_ext}'}
+        
+        # Clean up
+        try:
+            os.unlink(tmp_path)
+        except:
+            pass
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/parser/export', methods=['POST'])
+@login_required
+def export_parsed_expenses():
+    """Export parsed transactions to expense tracker"""
+    try:
+        data = request.json
+        parsed_data = data.get('data', {})
+        
+        expenses = document_parser.export_to_expense(parsed_data)
+        
+        if not expenses:
+            return jsonify({'success': False, 'error': 'No transactions to export'}), 400
+        
+        # Save to expense tracker
+        from models import Expense
+        count = 0
+        for exp in expenses:
+            expense = Expense(
+                user_id=current_user.id,
+                category=exp['category'],
+                amount=exp['amount'],
+                date=exp['date'],
+                merchant=exp['merchant'],
+                description=exp.get('description', 'Imported')
+            )
+            db.session.add(expense)
+            count += 1
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'count': count,
+            'message': f'Successfully exported {count} transactions'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+        
 # ---------------- RETIREMENT ----------------
 @app.route('/retirement')
 def retirement():
