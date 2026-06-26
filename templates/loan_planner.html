@@ -23,8 +23,8 @@
       <input type="number" min="0" id="income" placeholder="e.g. 6" value="6" style="margin-bottom:12px;">
 
       <div style="display:flex;gap:10px;margin-top:16px;">
-        <button class="btn btn-gold" style="flex:1" onclick="calcLoan()" id="sipBtn">Calculate</button>
-        <button class="btn btn-ghost" style="flex:1" onclick="resetLoan()" id="sipResetBtn">Reset</button>
+        <button class="btn btn-gold" style="flex:1" onclick="calcLoan()" id="Btn">Calculate</button>
+        <button class="btn btn-ghost" style="flex:1" onclick="resetLoan()" id="ResetBtn">Reset</button>
       </div>
     </div>
   </div>
@@ -39,7 +39,7 @@
 </div>
 
 <div style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 20px; align-items: start; max-width: 900px;">
-    <div class="card" style="width: 50%; box-sizing: border-box;">
+    <div class="card" style="box-sizing: border-box;">
       <div class="card-title" style="color: var(--gold); margin-bottom: 6px;">Loan & EMI Calculator</div>
       <div id="LoanEmicalc">
         <p style="color: var(--muted); font-size: 13px; margin: 0; padding-top: 4px;">
@@ -47,7 +47,7 @@
         </p>
       </div>
     </div>
-  <div class="card" style="width: 50%; box-sizing: border-box;">
+  <div class="card" style=" box-sizing: border-box;">
       <div class="card-title" style="color: var(--gold); margin-bottom: 6px;">Reliability Score</div>
       <div id="Reliability">
         <p style="color: var(--muted); font-size: 13px; margin: 0; padding-top: 4px;">
@@ -65,9 +65,49 @@
           Enter the info above to view the AI analysis.
         </p>
       </div>
-    </div>
+     </div>
+  </div>
 </div>
+</div>
+{% endblock %}
 
+{% block scripts %}
+<script>
+async function send_data() {
+  const principal_front=document.getElementById("principal");
+  const rate_front=document.getElemenfById("rate");
+  const time_front=document.getElemenfById("time");
+  const income_front=document.getElemenfById("income");
+  if {principal_front||rate_front||time_front||income} {
+    showResult('Btn","⚠ Fill in all fields.");
+      return;
+  }
+}
+async function load_data() {
+  try {
+      const data = await apiFetch('/loan_planner', {
+        principal: parseFloat(principal_front),
+        rate: parseFloat(rate_front),
+        time: parseFloat(time_front),
+        income: parseFloat(income_front),
+        
+      if (data.error) {
+        showResult("Btn",`⚠ ${data.error}`);
+      });
+      }else {
+        const loan_amt=data.Loan_Amount;
+        const loan_int=data.Loan_Interest;
+        const emi=data.EMI;
+        const net_income=data.Net_take_income;
+        const ratio=data.Ratio;
+        const zone=data.Zone;
+        const advice=data.Advice
+      }
+}
+  
+          
+    
+</script>
 
 
     
