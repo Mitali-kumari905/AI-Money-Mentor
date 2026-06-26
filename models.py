@@ -1202,6 +1202,7 @@ class GoalRecommendation(db.Model):
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
 
+
 # ============================================
 # NOTIFICATION MODELS
 # ============================================
@@ -1272,6 +1273,7 @@ class NotificationPreference(db.Model):
             'in_app_notification': self.in_app_notification,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }
+
 
         }     
 
