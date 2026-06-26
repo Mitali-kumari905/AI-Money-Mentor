@@ -227,6 +227,12 @@ def send_weekly_reports():
 
 # ---------------- RECURRING EXPENSES ----------------
 def process_recurring_expenses():
+    # Run subscription detection before processing existing recurring expenses
+    try:
+        from utils.subscription_detector import run_detection
+        run_detection()
+    except Exception as e:
+        print(f"⚠️ Subscription detection error: {e}")
     print("🔄 Processing recurring expenses...")
     today = date.today()
     try:
@@ -287,6 +293,7 @@ def process_recurring_expenses():
 scheduler = BackgroundScheduler()
 scheduler.add_job(send_weekly_reports, trigger=CronTrigger(day_of_week='mon', hour=9, minute=0), id='weekly_email_job', replace_existing=True)
 scheduler.add_job(process_recurring_expenses, trigger=CronTrigger(hour=9, minute=0), id='recurring_expense_job', replace_existing=True)
+# Add scheduler for subscription detection if separate frequency needed (currently bundled with recurring expense processing)
 
 def process_recurring_incomes():
     """Process recurring incomes and add them to income occurrences"""
@@ -814,17 +821,15 @@ def couple_unlink():
 @login_required
 
 def get_goals():
-
-def get_couple_goals():
-
     """Get shared goals"""
-
     try:
         status = couple_manager.get_couple_status(current_user.id)
         if not status.get('has_couple'):
             return jsonify({'error': 'No couple found'}), 400
         goals = couple_manager.get_shared_goals(status['couple_id'])
         return jsonify({'success': True, 'goals': goals})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -1937,6 +1942,70 @@ def force_weekly():
 @app.route('/recurring')
 def recurring_page():
     return render_template('recurring.html')
+
+@app.route('/subscriptions')
+def subscriptions_page():
+    return render_template('subscriptions.html')
+
+# API: List subscriptions
+@app.route('/api/subscriptions', methods=['GET'])
+def list_subscriptions():
+    from models import CoupleSubscription, User
+    user_id = 1  # placeholder for current user auth
+    subs = CoupleSubscription.query.filter(
+        (CoupleSubscription.user_id == user_id) | (CoupleSubscription.partner_user_id == user_id)
+    ).all()
+    return jsonify({'success': True, 'subscriptions': [s.to_dict() for s in subs]})
+
+# API: Add subscription (manual)
+@app.route('/api/subscriptions/add', methods=['POST'])
+def add_subscription():
+    data = request.json
+    required = ['title', 'amount', 'frequency', 'next_due_date', 'partner_user_id']
+    for field in required:
+        if field not in data:
+            return jsonify({'success': False, 'error': f'Missing field: {field}'}), 400
+    sub = CoupleSubscription(
+        user_id=1,  # placeholder current user
+        partner_user_id=data['partner_user_id'],
+        title=data['title'],
+        amount=data['amount'],
+        frequency=data['frequency'],
+        next_due_date=datetime.strptime(data['next_due_date'], "%Y-%m-%d").date(),
+        status='active'
+    )
+    db.session.add(sub)
+    db.session.commit()
+    return jsonify({'success': True, 'subscription': sub.to_dict()})
+
+# API: Update subscription
+@app.route('/api/subscriptions/update', methods=['POST'])
+def update_subscription():
+    data = request.json
+    sub_id = data.get('id')
+    if not sub_id:
+        return jsonify({'success': False, 'error': 'Missing subscription id'}), 400
+    sub = CoupleSubscription.query.get(sub_id)
+    if not sub:
+        return jsonify({'success': False, 'error': 'Subscription not found'}), 404
+    for field in ['title', 'amount', 'frequency', 'next_due_date', 'status']:
+        if field in data:
+            setattr(sub, field, data[field] if field != 'next_due_date' else datetime.strptime(data[field], "%Y-%m-%d").date())
+    db.session.commit()
+    return jsonify({'success': True, 'subscription': sub.to_dict()})
+
+# API: Cancel subscription (set status)
+@app.route('/api/subscriptions/cancel', methods=['POST'])
+def cancel_subscription():
+    data = request.json
+    sub_id = data.get('id')
+    sub = CoupleSubscription.query.get(sub_id)
+    if not sub:
+        return jsonify({'success': False, 'error': 'Subscription not found'}), 404
+    sub.status = 'canceled'
+    db.session.commit()
+    return jsonify({'success': True, 'message': 'Subscription canceled'})
+
 
 @app.route('/api/recurring/detect', methods=['GET'])
 def detect_recurring_expenses():
