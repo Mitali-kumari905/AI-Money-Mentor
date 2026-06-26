@@ -581,7 +581,121 @@ def mfa_disable():
             return jsonify({'success': True, 'message': 'MFA disabled'})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+   # ---------------- TAX FILING SYSTEM ----------------
+from utils.tax_filing import TaxFilingSystem
+
+@app.route('/tax-filing')
+@login_required
+def tax_filing_page():
+    """Tax Filing Page"""
+    return render_template('tax_filing.html', active_page='tax_filing')
+
+@app.route('/api/tax/filing/calculate', methods=['POST'])
+@login_required
+def tax_filing_calculate():
+    """Calculate tax for user"""
+    try:
+        # Get user financial data
+        user_data = {
+            'name': current_user.username,
+            'email': current_user.email,
+            'salary': 800000,  # Default, can be fetched from user profile
+            'business_income': 0,
+            'capital_gains': 0,
+            'rental_income': 0,
+            'other_income': 0,
+            'deduction_80c': 150000,
+            'deduction_80d': 25000,
+            'deduction_80e': 0,
+            'deduction_80g': 0,
+            'deduction_80tta': 0,
+            'hra_deduction': 60000,
+            'tds': 60000,
+            'advance_tax': 0,
+            'self_assessment_tax': 0,
+            'pan': 'ABCDE1234F',
+            'aadhar': '1234-5678-9012',
+            'bank_account': '1234567890',
+            'ifsc': 'SBIN0001234'
+        }
         
+        tax_system = TaxFilingSystem(user_data)
+        tax_result = tax_system.calculate_tax()
+        recommendations = tax_system.get_tax_saving_recommendations()
+        itr_data = tax_system.generate_itr('auto')
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'tax_calculation': tax_result,
+                'recommendations': recommendations,
+                'itr_data': itr_data,
+                'user_data': user_data
+            }
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/tax/filing/itr/generate', methods=['POST'])
+@login_required
+def tax_filing_generate_itr():
+    """Generate ITR form"""
+    try:
+        data = request.json
+        form_type = data.get('form_type', 'auto')
+        
+        user_data = {
+            'name': current_user.username,
+            'email': current_user.email,
+            'salary': 800000,
+            'deduction_80c': 150000,
+            'deduction_80d': 25000,
+            'hra_deduction': 60000,
+            'pan': 'ABCDE1234F'
+        }
+        
+        tax_system = TaxFilingSystem(user_data)
+        itr = tax_system.generate_itr(form_type)
+        
+        return jsonify({
+            'success': True,
+            'itr': itr
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/tax/filing/form16/parse', methods=['POST'])
+@login_required
+def tax_filing_parse_form16():
+    """Parse Form 16 PDF"""
+    try:
+        if 'form16' not in request.files:
+            return jsonify({'error': 'No file provided'}), 400
+        
+        file = request.files['form16']
+        if file.filename == '':
+            return jsonify({'error': 'No file selected'}), 400
+        
+        import tempfile
+        import os
+        
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp:
+            file.save(tmp.name)
+            tmp_path = tmp.name
+        
+        tax_system = TaxFilingSystem({})
+        result = tax_system.parse_form16(tmp_path)
+        
+        try:
+            os.unlink(tmp_path)
+        except:
+            pass
+        
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+             
 # ---------------- RETIREMENT ----------------
 @app.route('/retirement')
 def retirement():
