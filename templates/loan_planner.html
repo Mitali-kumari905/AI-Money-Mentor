@@ -135,16 +135,20 @@ async function load_data(inputs) {
 
     let bg_color = "";
     let text_color = "";
+    let zone_text ="";
 
     if (zone === 1) {
      bg_color = "rgba(46, 196, 182, 0.15)";  
-     text_color = "#2ec4b6";                
+     text_color = "#2ec4b6";
+     zone_text = "Green (Safe)";
     } else if (zone === 0) {
      bg_color = "rgba(255, 183, 3, 0.15)";   
-     text_color = "#ffb703";                 
+     text_color = "#ffb703"; 
+     zone_text = "Yellow (Moderate)";
     } else if (zone === -1) {
      bg_color = "rgba(230, 57, 70, 0.15)";   
-     text_color = "#e63946";                 
+     text_color = "#e63946";
+     zone_text = "Red (Danger)";
       }
 
     document.getElementById("Reliability").innerHTML = `
@@ -153,30 +157,45 @@ async function load_data(inputs) {
     <p style="margin: 8px 0;">
     <strong>Zone:</strong> 
     <span style="background-color: ${bg_color}; color: ${text_color}; padding: 3px 10px; border-radius: 12px; font-weight: bold; font-size: 12px; display: inline-block;">
-      ${zone}
+      ${zone_text}
     </span>
     </p>
     `;
 
     let years=[];
     let balances=[];
-    let P = parseFloat(loan_amt);                  // Total Loan Amount
-    let R = parseFloat(inputs.rate_front) / 100;    // Annual Rate (e.g., 0.12)
+    let P = parseFloat(loan_amt);                  
+    let R = parseFloat(inputs.rate_front) / 100;    
     let N = parseInt(inputs.time_front);
-    years.push("Start");
-    balances.push(Math.round(P));
+    let yearly_principal_payment = P / N; 
+    let currentBalance = P;
 
-    for (let i = 1; i <= total_years; i++) {
+    for (let i = 1; i <= N; i++) {
      years.push(`Year ${i}`);
-
-    for (let i = 1; i <= total_years; i++) {
-      years.push(`Year ${i}`);
-
-    let remaining_balance = total_loan - (total_loan / total_years) * i;
   
-    balances.push(Math.round(remaining_balance));
-    document.getElementById("Chart")=updateChart(years, balances);
-    }
+    let interest_for_year = currentBalance * R;
+  
+     currentBalance = (currentBalance + interest_for_year) - (yearly_principal_payment + interest_for_year);
+  
+    let dynamic_remaining = P * Math.pow(1 + R, i) - (yearly_principal_payment * ((Math.pow(1 + R, i) - 1) / R));
+  
+    if (i === N || dynamic_remaining < 0) {
+      dynamic_remaining = 0;
+  }
+
+    balances.push(Math.round(dynamic_remaining));
+    const ctx = document.getElementById('Chart').getContext('2d');
+    loanChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+    labels: years,     
+    datasets: [{
+      label: 'Remaining Balance',
+      data: balances,  
+      borderColor: '#d4af37'
+    }]
+  }
+}
     
   
 function resetLoan() {
