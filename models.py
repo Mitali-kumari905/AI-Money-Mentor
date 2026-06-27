@@ -28,6 +28,9 @@ class RecurringExpense(db.Model):
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_processed = db.Column(db.Date, nullable=True)
+    is_subscription = db.Column(db.Boolean, default=False)  # New field to flag subscription
+    last_price = db.Column(db.Float, nullable=True)      # Store last known price for alerts
+    status = db.Column(db.String(20), default='active') # active, canceled, paused
     
     def to_dict(self):
         return {
@@ -173,6 +176,22 @@ class PriceAlertEvent(db.Model):
 
 
 class Expense(db.Model):
+
+# New model for shared subscriptions between couple users
+class CoupleSubscription(db.Model):
+    __tablename__ = 'couple_subscriptions'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)  # Owner
+    partner_user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)  # Partner
+    title = db.Column(db.String(100), nullable=False)
+    amount = db.Column(db.Float, nullable=False)
+    frequency = db.Column(db.String(20), nullable=False)  # monthly, yearly, etc.
+    next_due_date = db.Column(db.Date, nullable=False)
+    status = db.Column(db.String(20), default='active')  # active, canceled
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    # Relationships
+    user = db.relationship('User', foreign_keys=[user_id])
+    partner = db.relationship('User', foreign_keys=[partner_user_id])
     __tablename__ = "expenses"
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     user = db.relationship("User", backref="expenses")
@@ -314,6 +333,35 @@ class FinancialGoal(db.Model):
 
 
 # ---------------- WEEKLY DIGEST (Scheduled AI) ----------------
+
+class ChildGoal(db.Model):
+    __tablename__ = "child_goals"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    child_name = db.Column(db.String(120), nullable=False)
+    goal_type = db.Column(db.String(50), nullable=False)  # e.g., 'Education', 'Wedding'
+    target_year = db.Column(db.Integer, nullable=False)  # year when goal is needed
+    inflation_assumption = db.Column(db.Float, default=0.05)  # annual inflation rate
+    current_cost = db.Column(db.Float, nullable=False)  # present estimated cost
+    projected_cost = db.Column(db.Float, nullable=False)  # cost after inflation
+    status = db.Column(db.String(20), default='active')  # active, completed, canceled
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "child_name": self.child_name,
+            "goal_type": self.goal_type,
+            "target_year": self.target_year,
+            "inflation_assumption": self.inflation_assumption,
+            "current_cost": self.current_cost,
+            "projected_cost": self.projected_cost,
+            "status": self.status,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
 class DigestPreference(db.Model):
     """Single-row preference store (no user table in current app)."""
     __tablename__ = "digest_preferences"
@@ -1202,6 +1250,7 @@ class GoalRecommendation(db.Model):
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
 
+
 # ============================================
 # NOTIFICATION MODELS
 # ============================================
@@ -1272,6 +1321,7 @@ class NotificationPreference(db.Model):
             'in_app_notification': self.in_app_notification,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }
+
 
 
         # ============================================
@@ -1359,6 +1409,7 @@ class SecurityEvent(db.Model):
 
 
         }     
+
 
 
 
