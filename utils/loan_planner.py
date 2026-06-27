@@ -37,7 +37,10 @@ def emi_calculation(principal, rate, time, income):
   m_rate=rate/12
   m_time=time*12
   try:
-    emi= (principal* m_rate/100 *(1+m_rate/100)**m_time)/(((1+m_rate/100)**m_time)-1)
+    if m_rate==0:
+      emi=principal/m_time
+    else:
+      emi= (principal* m_rate/100 *(1+m_rate/100)**m_time)/(((1+m_rate/100)**m_time)-1)
   except Exception as e:
     emi=0
   net=income-emi
