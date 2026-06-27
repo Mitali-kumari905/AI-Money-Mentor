@@ -72,13 +72,15 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+let loanChart = null;
 async function send_data() {
-  const principal_front=document.getElementById("principal");
-  const rate_front=document.getElementById("rate");
-  const time_front=document.getElementById("time");
-  const income_front=document.getElementById("income");
-  if {!principal_front||!rate_front||!time_front||!income} {
+  const principal_front=document.getElementById("principal").value;
+  const rate_front=document.getElementById("rate").value;
+  const time_front=document.getElementById("time").value;
+  const income_front=document.getElementById("income").value;
+  if (!principal_front||!rate_front||!time_front||!income) {
     showResult("⚠ Fill in all fields.");
       return;
   }
@@ -104,7 +106,7 @@ async function load_data(inputs) {
   }
 }
   
-  async function loan_calc(){
+  async function calcLoan(){
     const inputs = await send_data();
     if (!inputs) return;
 
@@ -119,7 +121,7 @@ async function load_data(inputs) {
     const zone=data.Zone;
     const advice=data.Advice;
     
-    let aiHTML=`<div style="margin-top: 20px; max-width: 900px;">
+    let aiHtml=`<div style="margin-top: 20px; max-width: 900px;">
     <div class="card" style="width: 100%; box-sizing: border-box;">
       <div class="card-title" style="color: var(--gold); margin-bottom: 6px;">AI Analysis</div>
       ${advice}
@@ -173,7 +175,7 @@ async function load_data(inputs) {
     let remaining_balance = total_loan - (total_loan / total_years) * i;
   
     balances.push(Math.round(remaining_balance));
-    document.getElementById("Chart").innerText=updateChart(years, balances);
+    document.getElementById("Chart")=updateChart(years, balances);
     }
     
   
@@ -186,14 +188,7 @@ function resetLoan() {
   document.getElementById("Reliability").innerHTML = '<p style="color: var(--muted); font-size: 13px; margin: 0; padding-top: 4px;">Enter the info above to view the results</p>';
   document.getElementById("aiPredictionResult").innerHTML = '<p style="color: var(--muted); font-size: 13px; margin: 0; padding-top: 4px;">Enter the info above to view the AI analysis.</p>';
 }
-
-    
-      
-    
-  
-          
-    
-</script>
+  </script>
 
 
     
