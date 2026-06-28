@@ -1668,7 +1668,7 @@ def get_achievements():
         
     return jsonify({"achievements": achievements}), 200
 
-@app.route("/dashboard-data")
+@app.route("/dashboard-data",methods=["GET","POST"])
 @login_required
 def dashboard_data():
     """API endpoint to fetch all data needed for populating the dashboard in one call."""
