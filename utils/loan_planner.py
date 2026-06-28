@@ -14,8 +14,7 @@ def data_input(principal, rate, time, income):
           "Loan_Interest":loan_calc.get("Interest",0),
           "EMI":emi,
           "Net_take_income":emi_calc.get("Net_take_home",0),
-          "Ratio":check.get("Ratio",0),
-          "Zone":check.get("Zone",0)
+          "EMI to Income Ratio":check.get("Ratio",0)
           }
   advice=financial_advice(metrics)
   print("Working backend")
@@ -65,7 +64,7 @@ def financial_advice(message):
         res = client.chat.completions.create(
             model="llama-3.1-8b-instant",
             messages=[
-                {"role": "system", "content": "You are a loan advisor, based on the info provided, provide the answers to the following questions:Should the user take the loan or not? What should they improve to make the loan suitable for them? Be precise and accurate."},
+                {"role": "system", "content": "You are a loan advisor, based on the info provided, provide the answers to the following questions:Should the user take the loan or not? What should they improve to make the loan suitable for them? All the prices are in rupees. Be precise and accurate."},
                 {"role": "user", "content": f"Here are the financial metrics:{user_prompt_string}"}
             ]
         )
