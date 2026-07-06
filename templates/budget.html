@@ -47,7 +47,8 @@
       <div class="card-title">Monthly Budget Status</div>
       <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 15px;">
         <label style="margin: 0; white-space: nowrap;">Selected Month:</label>
-        <input type="month" id="budgetMonth" onchange="loadBudgetStatus()" style="max-width: 180px;">
+        <input type="month" id="budgetMonth" onchange="loadBudgetStatus()" style="max-width: 180px;" aria-label="Select budget month">
+
       </div>
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
         <div style="background: rgba(212, 168, 67, 0.08); padding: 12px; border-radius: 12px; text-align: center;">
