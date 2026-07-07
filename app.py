@@ -5076,6 +5076,22 @@ def export_pdf():
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
+# ---------------- TAX SUMMARY PDF ----------------
+@app.route("/export/tax-summary", methods=["POST"])
+def export_tax_summary():
+    """Generate a year-end tax summary PDF with income, deductions, liability, gains, TLH events."""
+    try:
+        from utils.tax_summary_pdf import generate_tax_summary_pdf
+
+        data = request.json or {}
+        pdf_bytes = generate_tax_summary_pdf(data)
+        response = make_response(pdf_bytes)
+        response.headers["Content-Disposition"] = "attachment; filename=tax_summary.pdf"
+        response.headers["Content-Type"] = "application/pdf"
+        return response
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
 # ---------------- EXPENSE TRACKER ----------------
 @app.route("/expense", methods=["GET"])
 def expense_page():
