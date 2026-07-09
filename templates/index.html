@@ -1402,6 +1402,7 @@
         padding: 0 !important;
       }
     }
+  }
   </style>
 </head>
 
@@ -1419,9 +1420,13 @@
   <!-- ══════════ SIDEBAR ══════════ -->
   <div class="sidebar">
     <div class="logo">₹ Money Mentor</div>
-    <button class="btn btn-ghost" id="themeToggle" onclick="toggleTheme()" style="margin-bottom:15px;width:100%;">
+    
+    <button class="btn btn-ghost" id="themeToggle" onclick="toggleTheme()" 
+        style="margin-bottom:15px;width:100%;" 
+        aria-label="Toggle light and dark theme">
       ☀️ Light Mode
     </button>
+
 
     <div class="nav-item active" data-page="dashboard"><span class="icon">🏠</span> Dashboard</div>
     <div class="nav-item" data-page="chat"><span class="icon">🤖</span> AI Chat</div>
@@ -1543,7 +1548,11 @@
           </div>
           <div class="chat-input-row">
             <input type="text" id="dashMsg" placeholder="Ask anything about your finances…" onkeypress="if(event.key==='Enter') dashSend()">
-            <button class="btn btn-gold" onclick="dashSend()" id="dashBtn">➤</button>
+
+            <button class="btn btn-gold" onclick="dashSend()" id="dashBtn" aria-label="Send message">
+  ➤
+</button>
+
           </div>
         </div>
 
@@ -1782,9 +1791,13 @@
         <!-- Amount with Microphone Button -->
         <div style="display: flex; gap: 8px; flex: 1; min-width: 150px;">
           <input type="number" required min="0" id="amount" placeholder="Amount (₹)" style="flex: 1;">
-          <button type="button" id="voiceBtn" class="btn btn-gold" style="padding: 10px 14px; min-width: 50px; border-radius: 14px;" title="Speak expense">
+
+          <button type="button" id="voiceBtn" class="btn btn-gold" 
+              style="padding: 10px 14px; min-width: 50px; border-radius: 14px;" 
+              aria-label="Record expense by voice">
             🎤
           </button>
+
         </div>
         
         <input type="text" id="merchant" placeholder="Merchant (optional)">
