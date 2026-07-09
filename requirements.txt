@@ -31,7 +31,7 @@ seaborn==0.13.0
 Flask-SocketIO==5.3.6
 python-socketio==5.16.2
 
-eventlet==0.40.3
+eventlet==0.41.0
 
 # Document Parser Dependencies
 pytesseract==0.3.10
@@ -49,4 +49,4 @@ Pillow==12.2.0
 webauthn==2.1.0
 cryptography==49.0.0
 pyopenssl==26.2.0
-eventlet==0.40.3
+eventlet==0.41.0
