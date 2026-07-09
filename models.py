@@ -1297,6 +1297,89 @@ class SipSchedule(db.Model):
 
 
 # ============================================
+# WATCHLIST MODELS
+# ============================================
+
+class Watchlist(db.Model):
+    """A user's watchlist for tracking stocks and mutual funds."""
+    __tablename__ = 'watchlists'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    name = db.Column(db.String(80), nullable=False, default='My Watchlist')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship('User', backref='watchlists')
+    items = db.relationship('WatchlistItem', backref='watchlist', lazy=True, cascade='all, delete-orphan')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'name': self.name,
+            'item_count': len(self.items),
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+class WatchlistItem(db.Model):
+    """A stock or mutual fund tracked in a watchlist."""
+    __tablename__ = 'watchlist_items'
+
+    id = db.Column(db.Integer, primary_key=True)
+    watchlist_id = db.Column(db.Integer, db.ForeignKey('watchlists.id'), nullable=False)
+    symbol = db.Column(db.String(30), nullable=False)
+    name = db.Column(db.String(120), nullable=True)
+    asset_type = db.Column(db.String(20), default='stock')  # stock, mutual_fund
+    added_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    alerts = db.relationship('WatchlistAlert', backref='item', lazy=True, cascade='all, delete-orphan')
+
+    __table_args__ = (
+        db.UniqueConstraint('watchlist_id', 'symbol', name='uq_watchlist_symbol'),
+    )
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'watchlist_id': self.watchlist_id,
+            'symbol': self.symbol,
+            'name': self.name,
+            'asset_type': self.asset_type,
+            'added_at': self.added_at.isoformat() if self.added_at else None,
+        }
+
+
+class WatchlistAlert(db.Model):
+    """Custom price alert for a watchlist item."""
+    __tablename__ = 'watchlist_alerts'
+
+    id = db.Column(db.Integer, primary_key=True)
+    item_id = db.Column(db.Integer, db.ForeignKey('watchlist_items.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    condition = db.Column(db.String(20), nullable=False)  # above, below, cross
+    target_price = db.Column(db.Float, nullable=False)
+    is_triggered = db.Column(db.Boolean, default=False)
+    last_checked_price = db.Column(db.Float, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    last_triggered_at = db.Column(db.DateTime, nullable=True)
+
+    user = db.relationship('User', backref='watchlist_alerts')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'item_id': self.item_id,
+            'condition': self.condition,
+            'target_price': self.target_price,
+            'is_triggered': self.is_triggered,
+            'last_checked_price': self.last_checked_price,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'last_triggered_at': self.last_triggered_at.isoformat() if self.last_triggered_at else None,
+        }
+
+
+# ============================================
 # RISK PROFILE MODELS
 # ============================================
 
@@ -1344,6 +1427,7 @@ class RiskProfile(db.Model):
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
         }
+
 
 
 class InsurancePolicy(db.Model):

@@ -10,6 +10,7 @@ import os
 import sys
 import csv
 import logging
+import secrets
 from functools import wraps
 from groq import Groq
 from fpdf import FPDF
@@ -32,7 +33,18 @@ from flask_mail import Mail, Message
 from flask_socketio import SocketIO, emit, join_room, leave_room
 
 
-from models import db, Expense, Asset, Liability, BudgetLimit, BudgetAlert, PriceAlert, PriceAlertEvent, FinancialGoal, RecurringExpense, Portfolio, Account, Transaction, LedgerEntry, FxRateCache, FinancialGoalMilestone, RecurringIncome, IncomeOccurrence, MilestoneNotification, SipSchedule, ExpenseGroup, GroupMember, GroupExpense, GroupExpenseSplit, GroupSettlement, RiskProfile, InsurancePolicy, InsuranceRecommendation
+from models import (
+    db, Expense, Asset, Liability, BudgetLimit, BudgetAlert,
+    PriceAlert, PriceAlertEvent, FinancialGoal, RecurringExpense,
+    Portfolio, Account, Transaction, LedgerEntry, FxRateCache,
+    FinancialGoalMilestone, RecurringIncome, IncomeOccurrence,
+    MilestoneNotification, SipSchedule, ExpenseGroup, GroupMember,
+    GroupExpense, GroupExpenseSplit, GroupSettlement,
+    Watchlist, WatchlistItem, WatchlistAlert,
+    RiskProfile, InsurancePolicy, InsuranceRecommendation,
+)
+
+
 
 
 from utils.portfolio_optimizer import PortfolioOptimizer
@@ -181,9 +193,9 @@ app = Flask(__name__)
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_PORT'] = 587
 app.config['MAIL_USE_TLS'] = True
-app.config['MAIL_USERNAME'] = os.getenv('EMAIL_USER', 'your-email@gmail.com')
-app.config['MAIL_PASSWORD'] = os.getenv('EMAIL_PASS', 'your-app-password')
-app.config['MAIL_DEFAULT_SENDER'] = os.getenv('EMAIL_USER', 'your-email@gmail.com')
+app.config['MAIL_USERNAME'] = os.getenv('EMAIL_USER')
+app.config['MAIL_PASSWORD'] = os.getenv('EMAIL_PASS')
+app.config['MAIL_DEFAULT_SENDER'] = os.getenv('EMAIL_USER')
 
 mail = Mail(app)
 
@@ -209,10 +221,10 @@ if not _secret_key:
             "python -c \"import secrets; print(secrets.token_hex(32))\" "
             "and set it before starting the app (see .env.example)."
         )
-    _secret_key = "dev-secret-key"
+    _secret_key = secrets.token_hex(32)
     print(
-        "[WARNING] SECRET_KEY not set - using an insecure development "
-        "fallback. Set SECRET_KEY in the environment before deploying."
+        "[WARNING] SECRET_KEY not set - generated a random ephemeral key "
+        "for this session. Set SECRET_KEY in the environment before deploying."
     )
 app.config["SECRET_KEY"] = _secret_key
 
@@ -6594,6 +6606,71 @@ def check_all_recurring_expenses_job():
             db.session.add(exp)
         db.session.commit()
 
+# ---------------- WATCHLIST ----------------
+
+@app.route("/watchlist", methods=["GET"])
+@login_required
+def watchlist_page():
+    return render_template("watchlist.html", active_page="watchlist")
+
+
+@app.route("/api/watchlist", methods=["GET"])
+@login_required
+def get_watchlist():
+    wl = Watchlist.query.filter_by(user_id=current_user.id).first()
+    if not wl:
+        wl = Watchlist(user_id=current_user.id, name="My Watchlist")
+        db.session.add(wl)
+        db.session.commit()
+
+    items = WatchlistItem.query.filter_by(watchlist_id=wl.id).all()
+    result = []
+    for item in items:
+        d = item.to_dict()
+        try:
+            from utils.stock import get_stock_price
+            price_data = get_stock_price(item.symbol)
+            if price_data:
+                d["current_price"] = price_data.get("price")
+                d["change_pct"] = price_data.get("change_pct")
+                d["high_52w"] = price_data.get("high_52w")
+                d["low_52w"] = price_data.get("low_52w")
+        except Exception:
+            pass
+        alerts = WatchlistAlert.query.filter_by(item_id=item.id).all()
+        d["alerts"] = [a.to_dict() for a in alerts]
+        result.append(d)
+
+    return jsonify({"watchlist": wl.to_dict(), "items": result})
+
+
+@app.route("/api/watchlist/items", methods=["POST"])
+@login_required
+def add_watchlist_item():
+    wl = Watchlist.query.filter_by(user_id=current_user.id).first()
+    if not wl:
+        wl = Watchlist(user_id=current_user.id, name="My Watchlist")
+        db.session.add(wl)
+        db.session.flush()
+    data = request.json or {}
+    if not isinstance(data, dict):
+        raise ValidationError("Request body must be a JSON object")
+
+    symbol = validate_string(data.get("symbol"), "symbol").upper()
+    asset_type = data.get("asset_type", "stock")
+
+    existing = WatchlistItem.query.filter_by(watchlist_id=wl.id, symbol=symbol).first()
+    if existing:
+        return jsonify({"error": "Symbol already in watchlist"}), 400
+
+    name = data.get("name", symbol)
+    item = WatchlistItem(watchlist_id=wl.id, symbol=symbol, name=name, asset_type=asset_type)
+    db.session.add(item)
+    db.session.commit()
+
+    return jsonify({"item": item.to_dict()}), 201
+
+
 # ---------------- RISK PROFILE & PORTFOLIO ADVISOR ----------------
 
 RISK_QUESTIONS = [
@@ -6675,6 +6752,7 @@ def get_risk_profile():
 @app.route("/api/risk-profile/assess", methods=["POST"])
 @login_required
 def assess_risk_profile():
+
     data = request.json or {}
     if not isinstance(data, dict):
         raise ValidationError("Request body must be a JSON object")
@@ -6708,6 +6786,119 @@ def assess_risk_profile():
     db.session.commit()
 
     return jsonify({"profile": profile.to_dict()}), 201
+@app.route("/api/watchlist/items/<int:item_id>", methods=["DELETE"])
+@login_required
+def delete_watchlist_item(item_id):
+    item = WatchlistItem.query.get_or_404(item_id)
+    wl = Watchlist.query.filter_by(user_id=current_user.id).first()
+    if not wl or item.watchlist_id != wl.id:
+        return jsonify({"error": "Not found"}), 404
+
+    db.session.delete(item)
+    db.session.commit()
+    return jsonify({"message": "Item removed"})
+
+
+@app.route("/api/watchlist/alerts", methods=["POST"])
+@login_required
+def create_watchlist_alert():
+    data = request.json or {}
+    if not isinstance(data, dict):
+        raise ValidationError("Request body must be a JSON object")
+
+    item_id = validate_int(data.get("item_id"), "item_id", min_val=1)
+    item = WatchlistItem.query.get_or_404(item_id)
+
+    wl = Watchlist.query.filter_by(user_id=current_user.id).first()
+    if not wl or item.watchlist_id != wl.id:
+        return jsonify({"error": "Not found"}), 404
+
+    condition = validate_string(data.get("condition"), "condition")
+    if condition not in ("above", "below", "cross"):
+        raise ValidationError("'condition' must be 'above', 'below', or 'cross'")
+
+    target_price = validate_float(data.get("target_price"), "target_price", min_val=0.01)
+
+    alert = WatchlistAlert(
+        item_id=item_id,
+        user_id=current_user.id,
+        condition=condition,
+        target_price=target_price,
+    )
+    db.session.add(alert)
+    db.session.commit()
+
+    return jsonify({"alert": alert.to_dict()}), 201
+
+
+@app.route("/api/watchlist/alerts/<int:alert_id>", methods=["DELETE"])
+@login_required
+def delete_watchlist_alert(alert_id):
+    alert = WatchlistAlert.query.get_or_404(alert_id)
+    if alert.user_id != current_user.id:
+        return jsonify({"error": "Not found"}), 404
+
+    db.session.delete(alert)
+    db.session.commit()
+    return jsonify({"message": "Alert deleted"})
+
+
+@app.route("/api/watchlist/refresh", methods=["POST"])
+@login_required
+def refresh_watchlist_prices():
+    wl = Watchlist.query.filter_by(user_id=current_user.id).first()
+    if not wl:
+        return jsonify({"items": []})
+
+    items = WatchlistItem.query.filter_by(watchlist_id=wl.id).all()
+    result = []
+    from utils.stock import get_stock_price
+    for item in items:
+        d = item.to_dict()
+        try:
+            price_data = get_stock_price(item.symbol)
+            if price_data:
+                d["current_price"] = price_data.get("price")
+                d["change_pct"] = price_data.get("change_pct")
+                d["high_52w"] = price_data.get("high_52w")
+                d["low_52w"] = price_data.get("low_52w")
+        except Exception:
+            pass
+        alerts = WatchlistAlert.query.filter_by(item_id=item.id).all()
+        for alert in alerts:
+            if alert.is_triggered:
+                continue
+            current = d.get("current_price")
+            if current is None:
+                continue
+            triggered = False
+            if alert.condition == "above" and current >= alert.target_price:
+                triggered = True
+            elif alert.condition == "below" and current <= alert.target_price:
+                triggered = True
+            elif alert.condition == "cross" and alert.last_checked_price is not None:
+                if (alert.last_checked_price < alert.target_price and current >= alert.target_price) or \
+                   (alert.last_checked_price > alert.target_price and current <= alert.target_price):
+                    triggered = True
+            alert.last_checked_price = current
+            if triggered:
+                alert.is_triggered = True
+                alert.last_triggered_at = datetime.utcnow()
+                try:
+                    socketio.emit("watchlist_alert", {
+                        "alert_id": alert.id,
+                        "symbol": item.symbol,
+                        "condition": alert.condition,
+                        "target_price": alert.target_price,
+                        "current_price": current,
+                    }, room=f"user_{current_user.id}")
+                except Exception:
+                    pass
+        db.session.commit()
+        d["alerts"] = [a.to_dict() for a in alerts]
+        result.append(d)
+
+    return jsonify({"items": result})
 
 
 @app.route("/api/risk-profile/advice", methods=["GET"])
@@ -6753,6 +6944,7 @@ def get_risk_advice():
         "projections": projections,
         "horizon_years": horizon_years,
     })
+
 
 
 
