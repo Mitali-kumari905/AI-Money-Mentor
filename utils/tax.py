@@ -41,42 +41,59 @@ def calculate_tax(income, deduction_80c=0.0, deduction_80d=0.0, deduction_hra=0.
         )
         deduction_hra = hra_details["calculated_exemption"]
 
-    # 1. New Regime Calculation (FY 2024-25 / FY 2025-26)
+    # 1. New Regime Calculation (FY 2026-27)
     std_deduction_new = 75000
     taxable_new = max(0.0, income - std_deduction_new)
     
     tax_new = 0.0
     # Slabs:
-    # 0 - 3L: 0%
-    # 3L - 7L: 5%
-    # 7L - 10L: 10%
-    # 10L - 12L: 15%
-    # 12L - 15L: 20%
-    # >15L: 30%
-    if taxable_new <= 300000:
+    # 0 - 4L: 0%
+    # 4L - 8L: 5%
+    # 8L - 12L: 10%
+    # 12L - 16L: 15%
+    # 16L - 20L: 20%
+    # 20 - 24L: 25%
+    # >24L : 30%
+    if taxable_new <= 400000:
         tax_new = 0.0
-    elif taxable_new <= 700000:
-        tax_new = (taxable_new - 300000) * 0.05
-    elif taxable_new <= 1000000:
-        tax_new = 400000 * 0.05 + (taxable_new - 700000) * 0.10
+    elif taxable_new <= 800000:
+        tax_new = (taxable_new - 400000) * 0.05
     elif taxable_new <= 1200000:
-        tax_new = 400000 * 0.05 + 300000 * 0.10 + (taxable_new - 1000000) * 0.15
-    elif taxable_new <= 1500000:
-        tax_new = 400000 * 0.05 + 300000 * 0.10 + 200000 * 0.15 + (taxable_new - 1200000) * 0.20
+        tax_new = 400000 * 0.05 + (taxable_new - 800000) * 0.10
+    elif taxable_new <= 1600000:
+        tax_new = 400000 * 0.05 + 400000 * 0.10 + (taxable_new - 1200000) * 0.15
+    elif taxable_new <= 2000000:
+        tax_new = 400000 * 0.05 + 400000 * 0.10 + 400000 * 0.15 + (taxable_new - 1600000) * 0.20
+    elif taxable_new <= 2400000:
+        tax_new = 400000 * 0.05 + 400000 * 0.10 + 400000 * 0.15 + 400000 * 0.20+ (taxable_new - 2000000) * 0.25
     else:
-        tax_new = 400000 * 0.05 + 300000 * 0.10 + 200000 * 0.15 + 300000 * 0.20 + (taxable_new - 1500000) * 0.30
+        tax_new = 400000 * 0.05 + 400000 * 0.10 + 400000 * 0.15 + 400000 * 0.20 + 400000 * 0.25+ (taxable_new - 2400000) * 0.30
         
     # Rebate under Sec 87A for New Regime:
-    if taxable_new <= 700000:
+    if taxable_new <= 1200000:
         tax_new = 0.0
     # marginal relief
     else:
-        diff_amt=taxable_new-700000
+        diff_amt=taxable_new-1200000
         if diff_amt<=tax_new:
             tax_new=diff_amt
+
+    # surcharge
+    if taxable_new<=5000000:
+        surcharge_rate=0.0
+    elif taxable_new<=10000000:
+        surcharge_rate=10.0
+    elif taxable_new<=200000000:
+        surcharge_rate=15.0
+    else:
+        surcharge_rate=25.0
+    surcharge=tax_new*(surcharge_rate/100)
         
     cess_new = tax_new * 0.04
-    total_new = round(tax_new + cess_new, 2)
+    total_new = round(tax_new + cess_new+surcharge, 2)
+    
+    
+    
     
     # 2. Old Regime Calculation with custom deductions
     # Deductions cap logic:
@@ -110,7 +127,21 @@ def calculate_tax(income, deduction_80c=0.0, deduction_80d=0.0, deduction_hra=0.
         tax_old = 0.0
         
     cess_old = tax_old * 0.04
-    total_old = round(tax_old + cess_old, 2)
+    # surcharge
+    if taxable_old<=5000000:
+        surcharge_rate_=0.0
+    elif taxable_old<=10000000:
+        surcharge_rate_=10.0
+    elif taxable_old<=200000000:
+        surcharge_rate_=15.0
+    elif taxable_old<=50000000:
+        surcharge_rate_=25.0
+    else:
+        surcharge_rate_=37.0
+    surcharge_old=tax_old*(surcharge_rate_/100)
+
+    
+    total_old = round(tax_old + cess_old+ surcharge_old, 2)
     
     res_dict = {
         "gross_income": income,
@@ -125,13 +156,15 @@ def calculate_tax(income, deduction_80c=0.0, deduction_80d=0.0, deduction_hra=0.
             "taxable_income": taxable_new,
             "base_tax": round(tax_new, 2),
             "cess": round(cess_new, 2),
-            "total_tax": total_new
+            "surcharge":round(surcharge, 2),
+            "total_tax": total_new,
         },
         "old_regime": {
             "standard_deduction": std_deduction_old,
             "taxable_income": taxable_old,
             "base_tax": round(tax_old, 2),
             "cess": round(cess_old, 2),
+            "surcharge":round(surcharge_old, 2),
             "total_tax": total_old
         },
         "recommended": "New Regime" if total_new < total_old else "Old Regime",
