@@ -215,13 +215,13 @@
         alertEl.style.background = 'rgba(224, 82, 82, 0.1)';
         alertEl.style.border = '1px solid rgba(224, 82, 82, 0.3)';
         alertEl.style.color = '#ff5e5e';
-        alertEl.innerHTML = `⚠️ <strong>${data.runway_message}</strong>`;
+        alertEl.innerHTML = `⚠️ <strong>${esc(data.runway_message)}</strong>`;
       } else {
         alertEl.style.display = 'block';
         alertEl.style.background = 'rgba(46, 204, 138, 0.1)';
         alertEl.style.border = '1px solid rgba(46, 204, 138, 0.3)';
         alertEl.style.color = '#2ecc8a';
-        alertEl.innerHTML = `✅ <strong>${data.runway_message}</strong> Current Net Worth covers all projected expenses.`;
+        alertEl.innerHTML = `✅ <strong>${esc(data.runway_message)}</strong> Current Net Worth covers all projected expenses.`;
       }
 
       // 2. Render details list

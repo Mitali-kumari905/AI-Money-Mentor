@@ -414,10 +414,10 @@
         document.getElementById('goal_months').value = '';
         loadGoals();
       } else {
-        document.getElementById('createResult').innerHTML = `<div style="color:var(--red);">❌ ${result.error}</div>`;
+        document.getElementById('createResult').innerHTML = `<div style="color:var(--red);">❌ ${esc(result.error)}</div>`;
       }
     } catch (error) {
-      document.getElementById('createResult').innerHTML = `<div style="color:var(--red);">❌ ${error.message}</div>`;
+      document.getElementById('createResult').innerHTML = `<div style="color:var(--red);">❌ ${esc(error.message)}</div>`;
     }
   }
 
@@ -487,10 +487,10 @@
         html += '</div>';
         container.innerHTML = html;
       } else {
-        container.innerHTML = `<div style="color:var(--red);">❌ ${data.error}</div>`;
+        container.innerHTML = `<div style="color:var(--red);">❌ ${esc(data.error)}</div>`;
       }
     } catch (error) {
-      container.innerHTML = `<div style="color:var(--red);">❌ ${error.message}</div>`;
+      container.innerHTML = `<div style="color:var(--red);">❌ ${esc(error.message)}</div>`;
     }
   }
 
@@ -506,12 +506,12 @@
       const data = await response.json();
       
       if (data.success) {
-        container.innerHTML = `<div style="white-space:pre-wrap;font-size:13px;line-height:1.8;">${data.advice}</div>`;
+        container.innerHTML = `<div style="white-space:pre-wrap;font-size:13px;line-height:1.8;">${esc(data.advice)}</div>`;
       } else {
-        container.innerHTML = `<div style="color:var(--red);">❌ ${data.error}</div>`;
+        container.innerHTML = `<div style="color:var(--red);">❌ ${esc(data.error)}</div>`;
       }
     } catch (error) {
-      container.innerHTML = `<div style="color:var(--red);">❌ ${error.message}</div>`;
+      container.innerHTML = `<div style="color:var(--red);">❌ ${esc(error.message)}</div>`;
     }
   }
 
@@ -559,7 +559,7 @@
       });
 
       if (data.error) {
-        showResult('goalResult', `⚠ ${data.error}`);
+        showResult('goalResult', `⚠ ${esc(data.error)}`);
       } else {
         const title = name ? `Plan for "${name}"` : 'Your Plan';
         showResult('goalResult', `
@@ -582,7 +582,7 @@
           document.getElementById('sliderGoalYearsVal').textContent = years + ' Years';
 
           // Set formula
-          document.getElementById('goalFormula').innerHTML = `<strong>Required Monthly SIP Formula:</strong><br/>${data.explainability.formulas.required_monthly_sip}`;
+          document.getElementById('goalFormula').innerHTML = `<strong>Required Monthly SIP Formula:</strong><br/>${esc(data.explainability.formulas.required_monthly_sip)}`;
 
           // Set sensitivity values
           const sens = data.explainability.sensitivity;

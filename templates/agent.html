@@ -370,7 +370,7 @@
       const data = await apiFetch('/agent', { query });
       if (data.error) {
         agentResult.style.display = 'block';
-        showResult('agentResult', `⚠ ${data.error}`);
+        showResult('agentResult', `⚠ ${esc(data.error)}`);
       } else if (data.success && data.plan_steps && data.plan_steps.length > 0) {
         planData = data;
         renderCollaboration(data);

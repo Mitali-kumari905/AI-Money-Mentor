@@ -74,7 +74,7 @@
         return `
           <div class="card">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-              <div style="font-size: 20px; font-weight: 700; color: var(--text);">${goal.name}</div>
+              <div style="font-size: 20px; font-weight: 700; color: var(--text);">${esc(goal.name)}</div>
               <div style="display: flex; gap: 8px;">
                 <button class="btn btn-ghost" style="padding: 4px 8px; font-size: 12px;" onclick="editGoal(${goal.id})">✏️ Edit</button>
                 <button class="btn btn-ghost" style="padding: 4px 8px; font-size: 12px;" onclick="deleteGoal(${goal.id})">✖</button>

@@ -212,8 +212,8 @@
       tbody.innerHTML += `
         <tr style="border-bottom: 1px solid var(--border);">
           <td style="padding: 12px 8px;">
-            <strong style="color:var(--text);">${h.symbol}</strong><br>
-            <small style="color:var(--muted);">${h.name}</small>
+            <strong style="color:var(--text);">${esc(h.symbol)}</strong><br>
+            <small style="color:var(--muted);">${esc(h.name)}</small>
           </td>
           <td style="padding: 12px 8px; text-align: right;">${h.quantity}</td>
           <td style="padding: 12px 8px; text-align: right; font-family: monospace;">${sym}${fmtNum(h.buy_price)}</td>

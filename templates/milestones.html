@@ -232,7 +232,7 @@
       });
       const data = await res.json();
       if (data.error) {
-        showResult('sipResultMsg', `⚠ ${data.error}`);
+        showResult('sipResultMsg', `⚠ ${esc(data.error)}`);
       } else {
         showResult('sipResultMsg', `✅ SIP Schedule added for ${name}!`);
         document.getElementById('sipName').value = '';
@@ -261,7 +261,7 @@
       const res = await fetch(`/api/sip/schedules/${id}/pay`, { method: 'POST' });
       const data = await res.json();
       if (data.error) {
-        alert(`Error: ${data.error}`);
+        alert(`Error: ${esc(data.error)}`);
       } else {
         loadSipSchedules();
         loadNotifications(); // Reload milestones to show any new milestones!

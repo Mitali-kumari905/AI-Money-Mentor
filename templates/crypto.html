@@ -404,8 +404,8 @@
       
       tr.innerHTML = `
         <td style="padding: 14px 8px;">
-          <div style="font-weight: 600;">${h.symbol}</div>
-          <div style="font-size: 11px; color: var(--text-muted);">${h.name}</div>
+          <div style="font-weight: 600;">${esc(h.symbol)}</div>
+          <div style="font-size: 11px; color: var(--text-muted);">${esc(h.name)}</div>
         </td>
         <td style="padding: 14px 8px;">${h.quantity}</td>
         <td style="padding: 14px 8px;">${currencySymbol}${fmtNum(h.buy_price)}</td>

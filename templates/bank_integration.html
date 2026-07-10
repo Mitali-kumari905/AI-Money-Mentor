@@ -2,6 +2,11 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+<script>
+// HTML escape helper (issue #517)
+function esc(s){ const d=document.createElement('div'); d.textContent=String(s==null?'':s); return d.innerHTML; }
+</script>
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bank Integration - AI Money Mentor</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -151,14 +156,14 @@
                 const resultDiv = document.getElementById('connectResult');
                 
                 if (result.success) {
-                    resultDiv.innerHTML = `<div class="alert alert-success">✅ ${result.message}</div>`;
+                    resultDiv.innerHTML = `<div class="alert alert-success">✅ ${esc(result.message)}</div>`;
                     loadConnections();
                     document.getElementById('connectForm').reset();
                 } else {
-                    resultDiv.innerHTML = `<div class="alert alert-danger">❌ ${result.error}</div>`;
+                    resultDiv.innerHTML = `<div class="alert alert-danger">❌ ${esc(result.error)}</div>`;
                 }
             } catch (error) {
-                document.getElementById('connectResult').innerHTML = `<div class="alert alert-danger">❌ ${error.message}</div>`;
+                document.getElementById('connectResult').innerHTML = `<div class="alert alert-danger">❌ ${esc(error.message)}</div>`;
             }
         });
 
@@ -187,10 +192,10 @@
                     loadConnections();
                     loadAnomalies();
                 } else {
-                    document.getElementById('syncResult').innerHTML = `<div class="alert alert-danger">❌ ${result.error}</div>`;
+                    document.getElementById('syncResult').innerHTML = `<div class="alert alert-danger">❌ ${esc(result.error)}</div>`;
                 }
             } catch (error) {
-                document.getElementById('syncResult').innerHTML = `<div class="alert alert-danger">❌ ${error.message}</div>`;
+                document.getElementById('syncResult').innerHTML = `<div class="alert alert-danger">❌ ${esc(error.message)}</div>`;
             }
             
             btn.disabled = false;

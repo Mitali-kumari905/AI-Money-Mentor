@@ -6,6 +6,9 @@
     <title>Predictive Alerts - AI Money Mentor</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        function esc(s){ const d=document.createElement('div'); d.textContent=String(s==null?'':s); return d.innerHTML; }
+    </script>
     <style>
         body { background: #070b12; color: #eef0f5; font-family: 'Instrument Sans', sans-serif; }
         .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
@@ -182,10 +185,10 @@
                     document.getElementById('modelStatus').textContent = '✅ Trained';
                     document.getElementById('modelStatus').style.color = '#2ecc8a';
                 } else {
-                    result.innerHTML = `<div class="alert-box high">❌ ${data.error}</div>`;
+                    result.innerHTML = `<div class="alert-box high">❌ ${esc(data.error)}</div>`;
                 }
             } catch (error) {
-                result.innerHTML = `<div class="alert-box high">❌ ${error.message}</div>`;
+                result.innerHTML = `<div class="alert-box high">❌ ${esc(error.message)}</div>`;
             }
             
             btn.disabled = false;
@@ -218,10 +221,10 @@
                 if (data.success) {
                     renderPredictionResults(data);
                 } else {
-                    loading.innerHTML = `<div class="alert-box high">❌ ${data.error}</div>`;
+                    loading.innerHTML = `<div class="alert-box high">❌ ${esc(data.error)}</div>`;
                 }
             } catch (error) {
-                loading.innerHTML = `<div class="alert-box high">❌ ${error.message}</div>`;
+                loading.innerHTML = `<div class="alert-box high">❌ ${esc(error.message)}</div>`;
             }
         });
 
@@ -313,7 +316,7 @@
                     const severityClass = alert.severity;
                     alertHtml += `
                         <div class="alert-box ${severityClass}">
-                            ${alert.message}
+                            ${esc(alert.message)}
                             ${alert.action_required ? '<span class="badge bg-danger ms-2">Action Required</span>' : ''}
                         </div>
                     `;
@@ -406,10 +409,10 @@
                     
                     container.innerHTML = html;
                 } else {
-                    container.innerHTML = `<div class="alert-box high">❌ ${data.error}</div>`;
+                    container.innerHTML = `<div class="alert-box high">❌ ${esc(data.error)}</div>`;
                 }
             } catch (error) {
-                container.innerHTML = `<div class="alert-box high">❌ ${error.message}</div>`;
+                container.innerHTML = `<div class="alert-box high">❌ ${esc(error.message)}</div>`;
             }
         }
 
@@ -468,10 +471,10 @@
                     
                     container.innerHTML = html;
                 } else {
-                    container.innerHTML = `<div class="alert-box high">❌ ${data.error}</div>`;
+                    container.innerHTML = `<div class="alert-box high">❌ ${esc(data.error)}</div>`;
                 }
             } catch (error) {
-                container.innerHTML = `<div class="alert-box high">❌ ${error.message}</div>`;
+                container.innerHTML = `<div class="alert-box high">❌ ${esc(error.message)}</div>`;
             }
         }
 
@@ -508,7 +511,7 @@
                     container.innerHTML = `<div class="alert-box high">❌ ${data.error || 'No data available'}</div>`;
                 }
             } catch (error) {
-                container.innerHTML = `<div class="alert-box high">❌ ${error.message}</div>`;
+                container.innerHTML = `<div class="alert-box high">❌ ${esc(error.message)}</div>`;
             }
         }
 

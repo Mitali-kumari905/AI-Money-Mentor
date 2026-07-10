@@ -581,7 +581,7 @@
       if (data.status === "success") {
         await loadRecommendation();
       } else {
-        alert(`Error: ${data.error}`);
+        alert(`Error: ${esc(data.error)}`);
       }
     } catch (err) {
       console.error("Calculation failed:", err);
@@ -692,7 +692,7 @@
         await loadPolicies();
         await loadRecommendation(); // Gaps will update
       } else {
-        alert(`Error: ${data.error}`);
+        alert(`Error: ${esc(data.error)}`);
       }
     } catch (err) {
       console.error("Failed to save policy:", err);
@@ -713,7 +713,7 @@
         await loadPolicies();
         await loadRecommendation();
       } else {
-        alert(`Error: ${data.error}`);
+        alert(`Error: ${esc(data.error)}`);
       }
     } catch (err) {
       console.error("Failed to delete policy:", err);

@@ -157,13 +157,13 @@
         const limitDisplay = curr === 'INR' ? `₹${fmtNum(item.limit_amount)}` : `${sym}${fmtNum(item.limit_amount)} (${curr})`;
 
         if (pct >= 80) {
-          warnings.push(`<strong>${item.category}</strong>: Spent ₹${fmtNum(item.spent)} / ${limitDisplay} (${pct}%)`);
+          warnings.push(`<strong>${esc(item.category)}</strong>: Spent ₹${fmtNum(item.spent)} / ${limitDisplay} (${pct}%)`);
         }
         
         container.innerHTML += `
           <div style="background: rgba(255, 255, 255, 0.02); padding: 10px 14px; border: 1px solid var(--border); border-radius: 10px;">
             <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px; font-weight:600;">
-              <span>${item.category}</span>
+              <span>${esc(item.category)}</span>
               <span style="color: ${barColor}">${pctText}</span>
             </div>
             <div style="background: rgba(255, 255, 255, 0.06); border-radius: 99px; height: 8px; overflow: hidden; margin-bottom: 4px;">
@@ -228,7 +228,7 @@
           <div style="display: flex; gap: 10px; align-items: start; padding: 8px 12px; background: rgba(255, 255, 255, 0.02); border-bottom: 1px solid var(--border);">
             <div style="font-size: 16px;">🔔</div>
             <div style="flex: 1; font-size: 12px;">
-              <div>Category <strong>${item.category}</strong> crossed <strong>${item.threshold}%</strong> limit.</div>
+              <div>Category <strong>${esc(item.category)}</strong> crossed <strong>${item.threshold}%</strong> limit.</div>
               <div style="color: var(--muted); font-size: 10px; margin-top: 2px;">${timeStr} &nbsp;·&nbsp; Month: ${item.year_month}</div>
             </div>
           </div>

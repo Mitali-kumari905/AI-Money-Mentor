@@ -131,14 +131,14 @@
     const files = e.dataTransfer.files;
     if (files.length > 0) {
       document.getElementById('fileInput').files = files;
-      document.getElementById('uploadStatus').innerHTML = `<div style="color:var(--teal);">📎 ${files[0].name}</div>`;
+      document.getElementById('uploadStatus').innerHTML = `<div style="color:var(--teal);">📎 ${esc(files[0].name)}</div>`;
     }
   }
 
   function handleFileSelect(e) {
     const file = e.target.files[0];
     if (file) {
-      document.getElementById('uploadStatus').innerHTML = `<div style="color:var(--teal);">📎 ${file.name}</div>`;
+      document.getElementById('uploadStatus').innerHTML = `<div style="color:var(--teal);">📎 ${esc(file.name)}</div>`;
     }
   }
 
@@ -184,10 +184,10 @@
         document.getElementById('uploadStatus').innerHTML = '<div style="color:var(--green);">✅ Document parsed successfully!</div>';
         renderResults(data);
       } else {
-        document.getElementById('uploadStatus').innerHTML = `<div style="color:var(--red);">❌ ${data.error}</div>`;
+        document.getElementById('uploadStatus').innerHTML = `<div style="color:var(--red);">❌ ${esc(data.error)}</div>`;
       }
     } catch (error) {
-      document.getElementById('uploadStatus').innerHTML = `<div style="color:var(--red);">❌ ${error.message}</div>`;
+      document.getElementById('uploadStatus').innerHTML = `<div style="color:var(--red);">❌ ${esc(error.message)}</div>`;
     }
     
     document.getElementById('parseBtn').disabled = false;

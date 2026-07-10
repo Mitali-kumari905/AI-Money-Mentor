@@ -104,7 +104,7 @@ async function calcLoan(){
       });
       const data = await res.json();
       if (data.error) {
-        showResult("Msg",`⚠ ${data.error}`);
+        showResult("Msg",`⚠ ${esc(data.error)}`);
         setLoading('Btn', false);
         return;
       }

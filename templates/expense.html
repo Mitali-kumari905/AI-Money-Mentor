@@ -200,7 +200,7 @@
         if (window.marked && window.DOMPurify) {
           insightsEl.innerHTML = DOMPurify.sanitize(marked.parse(data.insights));
         } else {
-          insightsEl.innerHTML = `<p>${data.insights.replace(/\n/g, '<br>')}</p>`;
+          insightsEl.innerHTML = `<p>${esc(data.insights).replace(/\n/g, '<br>')}</p>`;
         }
       } else {
         insightsEl.innerHTML = `<p style="color: var(--muted); font-style: italic;">No AI insights available right now. Add more transactions to get started.</p>`;

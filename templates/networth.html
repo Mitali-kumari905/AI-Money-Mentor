@@ -123,7 +123,7 @@
           const displayVal = curr === 'INR' ? `₹${fmtNum(item.amount)}` : `${sym}${fmtNum(item.amount)} (${curr})`;
           assetList.innerHTML += `
             <tr style="border-bottom: 1px solid var(--border);">
-              <td style="padding: 8px;">${item.name}</td>
+              <td style="padding: 8px;">${esc(item.name)}</td>
               <td style="padding: 8px; text-align: center; color: var(--muted);">${formattedDate}</td>
               <td style="padding: 8px; text-align: right; font-family: monospace;">${displayVal}</td>
               <td style="padding: 8px; text-align: center;"><button class="btn btn-ghost" style="padding: 4px 8px; font-size: 10px;" onclick="deleteNWItem('asset', ${item.id})">✖</button></td>
@@ -148,7 +148,7 @@
           const displayVal = curr === 'INR' ? `₹${fmtNum(item.amount)}` : `${sym}${fmtNum(item.amount)} (${curr})`;
           liabList.innerHTML += `
             <tr style="border-bottom: 1px solid var(--border);">
-              <td style="padding: 8px;">${item.name}</td>
+              <td style="padding: 8px;">${esc(item.name)}</td>
               <td style="padding: 8px; text-align: center; color: var(--muted);">${formattedDate}</td>
               <td style="padding: 8px; text-align: right; font-family: monospace;">${displayVal}</td>
               <td style="padding: 8px; text-align: center;"><button class="btn btn-ghost" style="padding: 4px 8px; font-size: 10px;" onclick="deleteNWItem('liability', ${item.id})">✖</button></td>

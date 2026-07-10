@@ -12,6 +12,11 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/dom-to-image/2.6.0/dom-to-image.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='styles/main.css') }}">
+  <script>
+    // Global HTML escape helper (issue #517) — available in all templates extending base.html
+    function esc(s){ const d=document.createElement('div'); d.textContent=String(s==null?'':s); return d.innerHTML; }
+    function escAttr(s){ return String(s==null?'':s).replace(/"/g,'"').replace(/'/g,'&#39;'); }
+  </script>
   {% block head %}{% endblock %}
 </head>
 <body>

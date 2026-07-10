@@ -2,6 +2,11 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+<script>
+// HTML escape helper (issue #517)
+function esc(s){ const d=document.createElement('div'); d.textContent=String(s==null?'':s); return d.innerHTML; }
+</script>
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Couple Finance Planner - AI Money Mentor</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -390,12 +395,12 @@
                                     loadStatus();
                                 } else {
                                     document.getElementById('inviteResult').innerHTML = `
-                                        <div class="alert-box danger">❌ ${result.error}</div>
+                                        <div class="alert-box danger">❌ ${esc(result.error)}</div>
                                     `;
                                 }
                             } catch (error) {
                                 document.getElementById('inviteResult').innerHTML = `
-                                    <div class="alert-box danger">❌ ${error.message}</div>
+                                    <div class="alert-box danger">❌ ${esc(error.message)}</div>
                                 `;
                             }
                         });
@@ -542,7 +547,7 @@
                             <div class="card" style="margin-bottom:15px;">
                                 <div class="d-flex justify-content-between align-items-start">
                                     <div>
-                                        <h6>${goal.icon} ${goal.name}</h6>
+                                        <h6>${goal.icon} ${esc(goal.name)}</h6>
                                         <small class="text-muted">${goal.description || ''}</small>
                                     </div>
                                     <span class="badge ${statusClass}">${goal.status}</span>
@@ -887,7 +892,7 @@
                     document.getElementById('taxResult').innerHTML = `<div class="alert-box danger">❌ ${data.error || 'Unable to analyze'}</div>`;
                 }
             } catch (error) {
-                document.getElementById('taxResult').innerHTML = `<div class="alert-box danger">❌ ${error.message}</div>`;
+                document.getElementById('taxResult').innerHTML = `<div class="alert-box danger">❌ ${esc(error.message)}</div>`;
             }
         });
     </script>
