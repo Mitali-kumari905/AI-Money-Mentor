@@ -4,7 +4,7 @@
 
 {% block content %}
 <div id="tax_filing" class="page active">
-  <div class="page-title">📑 Automated Tax <span>Filing</span></div>
+  <div class="page-title"><i class="fa-solid fa-wand-magic-sparkles"></i> Automated Tax <span>Filing</span></div>
 
   <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 20px; max-width: 1400px;">
     
@@ -12,25 +12,25 @@
     <div>
       <!-- Income & Deductions -->
       <div class="card">
-        <div class="card-title">📊 Income & Deductions Summary</div>
+        <div class="card-title"><i class="fa-solid fa-file-lines"></i> Income & Deductions Summary</div>
         <div id="incomeDeductions"></div>
         <button class="btn btn-gold" style="width:100%;margin-top:12px;" onclick="calculateTax()">🔍 Calculate Tax</button>
       </div>
 
       <!-- Tax Calculation Results -->
       <div class="card" id="taxResultCard" style="display:none;">
-        <div class="card-title">💸 Tax Calculation</div>
+        <div class="card-title"><i class="fa-solid fa-calculator"></i> Tax Calculation</div>
         <div id="taxResult"></div>
       </div>
 
       <!-- ITR Generation -->
       <div class="card">
-        <div class="card-title">📄 Generate ITR</div>
+        <div class="card-title"><i class="fa-solid fa-gears"></i> Generate ITR</div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;">
-          <button class="btn btn-gold" onclick="generateITR('ITR-1')">📄 Generate ITR-1</button>
-          <button class="btn btn-gold" onclick="generateITR('ITR-2')">📄 Generate ITR-2</button>
-          <button class="btn btn-gold" onclick="generateITR('ITR-3')">📄 Generate ITR-3</button>
-          <button class="btn btn-ghost" onclick="generateITR('auto')">🤖 Auto Detect</button>
+          <button class="btn btn-gold" onclick="generateITR('ITR-1')"><i class="fa-solid fa-gears"></i> Generate ITR-1</button>
+          <button class="btn btn-gold" onclick="generateITR('ITR-2')"><i class="fa-solid fa-gears"></i> Generate ITR-2</button>
+          <button class="btn btn-gold" onclick="generateITR('ITR-3')"><i class="fa-solid fa-gears"></i> Generate ITR-3</button>
+          <button class="btn btn-ghost" onclick="generateITR('auto')"> <i class="fa-solid fa-magnifying-glass"></i>Auto Detect</button>
         </div>
         <div id="itrResult" style="margin-top:12px;"></div>
       </div>
@@ -40,7 +40,7 @@
     <div>
       <!-- Tax Saving Recommendations -->
       <div class="card">
-        <div class="card-title">💡 Tax Saving Recommendations</div>
+        <div class="card-title"><i class="fa-solid fa-lightbulb"></i> Tax Saving Recommendations</div>
         <div id="recommendations">
           <div class="text-muted" style="text-align:center;padding:20px;">Calculate tax to get recommendations</div>
         </div>
@@ -48,10 +48,10 @@
 
       <!-- Form 16 Upload -->
       <div class="card">
-        <div class="card-title">📎 Upload Form 16</div>
+        <div class="card-title"><i class="fa-solid fa-link"></i> Upload Form 16</div>
         <form id="form16Upload" enctype="multipart/form-data">
           <div style="border:2px dashed rgba(255,255,255,0.1);border-radius:14px;padding:20px;text-align:center;cursor:pointer;" onclick="document.getElementById('form16Input').click()">
-            <div style="font-size:36px;">📄</div>
+            <div style="font-size:36px;"><i class="fa-solid fa-file-lines"></i></div>
             <div style="font-size:13px;color:var(--muted);">Click to upload Form 16 PDF</div>
             <input type="file" id="form16Input" accept=".pdf" style="display:none;" onchange="uploadForm16()">
           </div>
@@ -61,7 +61,7 @@
 
       <!-- Filing Status -->
       <div class="card">
-        <div class="card-title">📋 Filing Status</div>
+        <div class="card-title"><i class="fa-solid fa-circle-info"></i> Filing Status</div>
         <div id="filingStatus">
           <div class="text-muted" style="text-align:center;padding:20px;">No filing history</div>
         </div>
@@ -116,7 +116,7 @@
     }
     
     btn.disabled = false;
-    btn.innerHTML = '🔍 Calculate Tax';
+    btn.innerHTML = '<i class="fa-solid fa-magnifying-glass"></i> Calculate Tax';
   }
 
   function renderTaxResults(data) {
@@ -158,7 +158,7 @@
       </div>
       <div style="margin-top:10px;padding:10px;background:rgba(212,168,67,0.1);border-radius:8px;text-align:center;">
         <strong>Recommended: ${recommended.toUpperCase()} Regime</strong>
-        <span style="color:#2ecc8a;margin-left:8px;">✅ Save ₹${fmtNum(tax.savings)}</span>
+        <span style="color:#2ecc8a;margin-left:8px;"><i class="fa-solid fa-circle-check"></i> Save ₹${fmtNum(tax.savings)}</span>
       </div>
     `;
     
@@ -170,7 +170,7 @@
     const recs = data.recommendations || [];
     
     if (recs.length === 0) {
-      container.innerHTML = '<div style="color:#2ecc8a;text-align:center;padding:20px;">✅ You are tax optimized!</div>';
+      container.innerHTML = '<div style="color:#2ecc8a;text-align:center;padding:20px;"><i class="fa-solid fa-circle-check"></i> You are tax optimized!</div>';
       return;
     }
     
@@ -207,17 +207,17 @@
         const itr = data.itr;
         container.innerHTML = `
           <div style="background:rgba(46,204,138,0.05);border-radius:8px;padding:12px;">
-            <div style="font-weight:700;color:#2ecc8a;">✅ ${itr.form_type} Generated</div>
+            <div style="font-weight:700;color:#2ecc8a;"><i class="fa-solid fa-circle-check"></i> ${itr.form_type} Generated</div>
             <div style="font-size:13px;color:var(--muted);margin-top:4px;">
               Assessment Year: ${itr.assessment_year} | Income: ₹${fmtNum(itr.income.total)}
             </div>
             <div style="font-size:13px;color:var(--muted);">Tax Payable: ₹${fmtNum(itr.tax_calculation.new_regime.total_tax)}</div>
-            <button class="btn btn-gold" style="margin-top:8px;" onclick="downloadITR()">📥 Download ITR</button>
+            <button class="btn btn-gold" style="margin-top:8px;" onclick="downloadITR()"><i class="fa-solid fa-download"></i> Download ITR</button>
           </div>
         `;
       }
     } catch (error) {
-      container.innerHTML = `<div style="color:var(--red);">❌ ${error.message}</div>`;
+      container.innerHTML = `<div style="color:var(--red);"><i class="fa-solid fa-circle-xmark"></i> ${error.message}</div>`;
     }
   }
 
@@ -259,7 +259,7 @@
         const d = data.data;
         result.innerHTML = `
           <div style="background:rgba(46,204,138,0.05);border-radius:8px;padding:12px;">
-            <div style="font-weight:700;color:#2ecc8a;">✅ Form 16 Parsed Successfully</div>
+            <div style="font-weight:700;color:#2ecc8a;"><i class="fa-solid fa-circle-check"></i> Form 16 Parsed Successfully</div>
             <div style="font-size:13px;color:var(--muted);margin-top:4px;">
               Employer: ${d.employer || 'N/A'} | PAN: ${d.pan || 'N/A'}
             </div>
@@ -269,10 +269,10 @@
           </div>
         `;
       } else {
-        result.innerHTML = `<div style="color:var(--red);">❌ ${data.error}</div>`;
+        result.innerHTML = `<div style="color:var(--red);"><i class="fa-solid fa-circle-xmark"></i> ${data.error}</div>`;
       }
     } catch (error) {
-      result.innerHTML = `<div style="color:var(--red);">❌ ${error.message}</div>`;
+      result.innerHTML = `<div style="color:var(--red);"><i class="fa-solid fa-circle-xmark"></i> ${error.message}</div>`;
     }
   }
 

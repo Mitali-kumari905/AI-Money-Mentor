@@ -37,7 +37,7 @@
     <div class="container">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
-                <h1 class="text-gold">🗣️ Voice Assistant</h1>
+                <h1 class="text-gold"><i class="fa-solid fa-volume-high"></i> Voice Assistant</h1>
                 <p class="text-muted">Speak to manage your finances in your language</p>
             </div>
             <a href="/" class="btn btn-gold">← Back to Dashboard</a>
@@ -51,7 +51,7 @@
 
             <!-- Voice Button -->
             <button id="voiceButton" class="voice-button btn btn-gold" onclick="toggleRecording()">
-                🎤
+                <i class="fa-solid fa-microphone"></i>
             </button>
             <p class="text-muted" id="voiceStatus">Click to start speaking</p>
 
@@ -72,7 +72,7 @@
 
         <!-- Transcript -->
         <div class="card">
-            <h5>📝 Transcript</h5>
+            <h5><i class="fa-solid fa-file-lines"></i> Transcript</h5>
             <div class="transcript-box" id="transcript">
                 <span class="text-muted">Your spoken command will appear here...</span>
             </div>
@@ -80,13 +80,13 @@
 
         <!-- Result -->
         <div class="card" id="resultCard" style="display:none;">
-            <h5>📊 Result</h5>
+            <h5><i class="fa-solid fa-square-poll-horizontal"></i> Result</h5>
             <div id="resultContent"></div>
         </div>
 
         <!-- Example Commands -->
         <div class="card">
-            <h5>💡 Try These Commands</h5>
+            <h5><i class="fa-solid fa-lightbulb"></i> Try These Commands</h5>
             <div class="d-flex flex-wrap">
                 <span class="example-command" onclick="setExample('Transfer 500 to savings')">💰 Transfer 500 to savings</span>
                 <span class="example-command" onclick="setExample('What is my balance?')">💳 What is my balance?</span>
@@ -100,7 +100,7 @@
 
         <!-- Languages Supported -->
         <div class="card">
-            <h5>🌍 Supported Languages</h5>
+            <h5><i class="fa-solid fa-globe"></i> Supported Languages</h5>
             <div class="d-flex flex-wrap gap-2">
                 <span class="language-badge">🇬🇧 English</span>
                 <span class="language-badge">🇮🇳 Hindi</span>
@@ -151,7 +151,7 @@
                 btn.classList.add('recording');
                 btn.innerHTML = '⏹️';
                 document.getElementById('voiceStatus').textContent = 'Recording... Click to stop';
-                document.getElementById('transcript').innerHTML = '<span class="text-muted">🎤 Listening...</span>';
+                document.getElementById('transcript').innerHTML = '<span class="text-muted"><i class="fa-solid fa-microphone"></i> Listening...</span>';
 
                 // Start visualizer
                 document.querySelectorAll('.bar').forEach((bar, i) => {
@@ -230,25 +230,25 @@
                         document.getElementById('resultCard').style.display = 'block';
                         document.getElementById('resultContent').innerHTML = `
                             <div class="command-result error">
-                                <div style="font-size: 16px; color: #e05252;">❌ ${result.execution.response || 'Command failed'}</div>
+                                <div style="font-size: 16px; color: #e05252;"><i class="fa-solid fa-circle-xmark"></i> ${result.execution.response || 'Command failed'}</div>
                             </div>
                         `;
                     }
 
                     document.getElementById('voiceStatus').textContent = 'Click to speak again';
                 } else {
-                    document.getElementById('transcript').innerHTML = `<span style="color: #e05252;">❌ ${result.error}</span>`;
+                    document.getElementById('transcript').innerHTML = `<span style="color: #e05252;"><i class="fa-solid fa-circle-xmark"></i> ${result.error}</span>`;
                     document.getElementById('voiceStatus').textContent = 'Click to try again';
                 }
             } catch (error) {
                 console.error('Error:', error);
-                document.getElementById('transcript').innerHTML = `<span style="color: #e05252;">❌ Network error: ${error.message}</span>`;
+                document.getElementById('transcript').innerHTML = `<span style="color: #e05252;"><i class="fa-solid fa-circle-xmark"></i> Network error: ${error.message}</span>`;
                 document.getElementById('voiceStatus').textContent = 'Click to try again';
             }
         }
 
         function setExample(text) {
-            document.getElementById('transcript').innerHTML = `<div><strong>💬 "${text}"</strong></div>`;
+            document.getElementById('transcript').innerHTML = `<div><strong><i class="fa-solid fa-comments"></i> "${text}"</strong></div>`;
             // Simulate sending
             document.getElementById('voiceStatus').textContent = 'Processing example...';
             

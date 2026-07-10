@@ -274,7 +274,7 @@
 
 {% block content %}
 <div id="agent" class="page center-page active" style="max-width: 1200px; margin: 0 auto; padding: 20px;">
-  <div class="page-title">🧠 Collaborative <span>Planner</span></div>
+  <div class="page-title"><i class="fa-solid fa-brain"></i> Collaborative <span>Planner</span></div>
   
   <!-- Query input card -->
   <div class="card" style="width: 100%; max-width: 900px; margin: 0 auto;">
@@ -301,7 +301,7 @@
     </div>
 
     <button class="btn btn-gold" style="margin-top: 20px; width: 100%; font-size: 15px; font-weight: 700; padding: 14px;" onclick="runAgent()" id="agentBtn">
-      🚀 Generate Collaborative Financial Plan
+      <i class="fa-solid fa-rocket"></i> Generate Collaborative Financial Plan
     </button>
     
     <div id="agentResult" class="result-box" style="display: none; margin-top: 16px;"></div>
@@ -319,8 +319,8 @@
     <!-- Right Column: Plan Detailed View -->
     <div class="detail-column">
       <div class="tabs-header">
-        <button id="masterTabBtn" class="tab-btn active" onclick="switchTab('master')">📋 Synthesized Master Plan</button>
-        <button id="agentTabBtn" class="tab-btn" onclick="switchTab('agent')">🤖 Agent Breakdown</button>
+        <button id="masterTabBtn" class="tab-btn active" onclick="switchTab('master')"><i class="fa-solid fa-calendar-check"></i> Synthesized Master Plan</button>
+        <button id="agentTabBtn" class="tab-btn" onclick="switchTab('agent')"><i class="fa-solid fa-robot"></i> Agent Breakdown</button>
       </div>
       
       <!-- Synthesized Master Plan Tab -->
@@ -329,7 +329,7 @@
       <!-- Agent Details Tab -->
       <div id="agentDetailContent" class="tab-content markdown-body">
         <div style="text-align: center; color: var(--text-muted); padding: 40px 0;">
-          <span style="font-size: 32px;">👈</span>
+          <span style="font-size: 32px;"><i class="fa-solid fa-arrow-left"></i></span>
           <p style="margin-top: 12px;">Click a step on the timeline to view that agent's individual detailed response</p>
         </div>
       </div>
@@ -337,7 +337,7 @@
       <!-- Disclaimer section inside the card -->
       <div id="disclaimerCard" class="disclaimer-card" style="display: none;">
         <div style="display: flex; gap: 10px; align-items: flex-start;">
-          <span style="font-size: 16px;">⚠️</span>
+          <span style="font-size: 16px;"><i class="fa-solid fa-triangle-exclamation"></i></span>
           <div id="disclaimerContent" style="color: var(--text-dim); line-height: 1.5;"></div>
         </div>
       </div>

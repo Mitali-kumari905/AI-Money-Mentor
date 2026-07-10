@@ -107,36 +107,36 @@
     <div class="container">
         <!-- Header -->
         <div class="header">
-            <h1>📊 Weekly Financial Digest</h1>
+            <h1><i class="fa-solid fa-money-bill-wave"></i> Weekly Financial Digest</h1>
             <p>Your weekly financial health checkup — {{ date }}</p>
         </div>
 
         <!-- Stats Grid -->
         <div class="stats-grid">
             <div class="stat-card">
-                <div class="label">💰 Total Spend</div>
+                <div class="label"><i class="fa-solid fa-calculator"></i> Total Spend</div>
                 <div class="value">{{ total_spend }}</div>
                 <div class="change {{ spend_change_class }}">{{ spend_change }}% vs last week</div>
             </div>
             <div class="stat-card">
-                <div class="label">📈 Net Worth</div>
+                <div class="label"><i class="fa-solid fa-gem"></i> Net Worth</div>
                 <div class="value">{{ net_worth }}</div>
                 <div class="change positive">{{ net_worth_change }}% this week</div>
             </div>
             <div class="stat-card">
-                <div class="label">🎯 Budget Health</div>
+                <div class="label"><i class="fa-solid fa-wallet"></i> Budget Health</div>
                 <div class="value">{{ budget_health }}</div>
                 <div class="change {{ budget_health_class }}">{{ budget_health_text }}</div>
             </div>
             <div class="stat-card">
-                <div class="label">💳 Top Category</div>
+                <div class="label"><i class="fa-solid fa-tags"></i> Top Category</div>
                 <div class="value">{{ top_category }}</div>
                 <div class="change">{{ top_category_amount }}</div>
             </div>
         </div>
 
         <!-- Top Spending Categories -->
-        <h3>📋 Top 3 Spending Categories</h3>
+        <h3><i class="fa-solid fa-list"></i> Top 3 Spending Categories</h3>
         <ul style="list-style: none; padding: 0;">
             {% for category, amount in top_categories.items() %}
             <li style="padding: 8px 12px; background: #f8f9fa; margin: 5px 0; border-radius: 8px; display: flex; justify-content: space-between;">
@@ -148,13 +148,13 @@
 
         <!-- AI Insight -->
         <div class="insight-box">
-            <h3>💡 AI Insight</h3>
+            <h3><i class="fa-solid fa-lightbulb"></i> AI Insight</h3>
             <p>{{ ai_insight }}</p>
         </div>
 
         <!-- Call to Action -->
         <div style="text-align: center;">
-            <a href="{{ dashboard_url }}" class="btn">📊 View Full Dashboard →</a>
+            <a href="{{ dashboard_url }}" class="btn"><i class="fa-solid fa-chart-pie"></i> View Full Dashboard →</a>
         </div>
 
         <!-- Footer -->

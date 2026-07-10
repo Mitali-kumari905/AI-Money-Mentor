@@ -43,7 +43,7 @@ function esc(s){ const d=document.createElement('div'); d.textContent=String(s==
     <div class="container">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
-                <h1 class="text-gold">🧠 Multi-Agent System</h1>
+                <h1 class="text-gold"><i class="fa-solid fa-brain"></i> Multi-Agent System</h1>
                 <p class="text-muted">Specialized AI agents working together for comprehensive financial advice</p>
             </div>
             <a href="/" class="btn btn-gold">← Back to Dashboard</a>
@@ -51,7 +51,7 @@ function esc(s){ const d=document.createElement('div'); d.textContent=String(s==
 
         <!-- Agent Status -->
         <div class="card">
-            <h5>🤖 Active Agents</h5>
+            <h5><i class="fa-solid fa-robot"></i> Active Agents</h5>
             <div id="agentStatus" class="row">
                 <div class="col-md-4">
                     <div class="agent-card">
@@ -85,7 +85,7 @@ function esc(s){ const d=document.createElement('div'); d.textContent=String(s==
                 </div>
                 <div class="col-md-4">
                     <div class="agent-card" style="border-color: #d4a843;">
-                        <div><span class="dot dot-active" style="background: #d4a843;"></span><strong>🧠 Chief Planner</strong></div>
+                        <div><span class="dot dot-active" style="background: #d4a843;"></span><strong><i class="fa-solid fa-brain"></i> Chief Planner</strong></div>
                         <small class="text-muted">Orchestrates all agents for comprehensive advice</small>
                     </div>
                 </div>
@@ -94,11 +94,11 @@ function esc(s){ const d=document.createElement('div'); d.textContent=String(s==
 
         <!-- Query Input -->
         <div class="card">
-            <h5>💬 Ask the Multi-Agent System</h5>
+            <h5><i class="fa-solid fa-comments"></i> Ask the Multi-Agent System</h5>
             <p class="text-muted small">The Chief Planner will analyze your query and route it to the right specialized agents.</p>
             <textarea id="queryInput" rows="3" placeholder="e.g., I earn ₹12L/year. Should I invest in NPS or ELSS?">I earn ₹12L/year. Should I invest in NPS or ELSS?</textarea>
             <div class="mt-3">
-                <button class="btn btn-gold" onclick="sendQuery()">🚀 Ask Multi-Agent System</button>
+                <button class="btn btn-gold" onclick="sendQuery()"><i class="fa-solid fa-rocket"></i> Ask Multi-Agent System</button>
                 <button class="btn btn-ghost" onclick="clearResponse()">Clear</button>
             </div>
         </div>
@@ -106,7 +106,7 @@ function esc(s){ const d=document.createElement('div'); d.textContent=String(s==
         <!-- Response -->
         <div id="responseArea" style="display:none;">
             <div class="card">
-                <h5>📊 Response</h5>
+                <h5><i class="fa-solid fa-reply"></i> Response</h5>
                 <div id="responseContent" class="response-box"></div>
                 <div id="agentResults" class="mt-3"></div>
             </div>
@@ -120,13 +120,13 @@ function esc(s){ const d=document.createElement('div'); d.textContent=String(s==
 
         <!-- Example Queries -->
         <div class="card">
-            <h6>💡 Try These Queries</h6>
+            <h6><i class="fa-solid fa-lightbulb"></i> Try These Queries</h6>
             <div class="d-flex flex-wrap gap-2">
-                <button class="btn btn-sm btn-ghost" onclick="setQuery('Should I choose Old or New Tax Regime?')">💸 Tax Regime</button>
-                <button class="btn btn-sm btn-ghost" onclick="setQuery('How to build a diversified investment portfolio?')">📊 Portfolio</button>
-                <button class="btn btn-sm btn-ghost" onclick="setQuery('How to reduce my debt and save more?')">💰 Debt Reduction</button>
-                <button class="btn btn-sm btn-ghost" onclick="setQuery('What insurance do I need at age 30?')">🛡️ Insurance</button>
-                <button class="btn btn-sm btn-ghost" onclick="setQuery('I earn ₹80,000 monthly. How should I plan my finances?')">📈 Financial Planning</button>
+                <button class="btn btn-sm btn-ghost" onclick="setQuery('Should I choose Old or New Tax Regime?')"><i class="fa-solid fa-money-bill-wave"></i> Tax Regime</button>
+                <button class="btn btn-sm btn-ghost" onclick="setQuery('How to build a diversified investment portfolio?')"><i class="fa-solid fa-briefcase"></i> Portfolio</button>
+                <button class="btn btn-sm btn-ghost" onclick="setQuery('How to reduce my debt and save more?')"><i class="fa-solid fa-hand-holding-dollar"></i> Debt Reduction</button>
+                <button class="btn btn-sm btn-ghost" onclick="setQuery('What insurance do I need at age 30?')"><i class="fa-solid fa-shield-halved"></i> Insurance</button>
+                <button class="btn btn-sm btn-ghost" onclick="setQuery('I earn ₹80,000 monthly. How should I plan my finances?')"><i class="fa-solid fa-calendar-check"></i> Financial Planning</button>
             </div>
         </div>
     </div>

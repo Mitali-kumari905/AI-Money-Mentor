@@ -4,14 +4,14 @@
 
 {% block content %}
 <div id="document_parser" class="page active">
-  <div class="page-title">📄 AI Document <span>Parser</span></div>
+  <div class="page-title"><i class="fa-solid fa-file-lines"></i> AI Document <span>Parser</span></div>
 
   <div style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 20px; max-width: 1200px;">
     
     <!-- Left Panel: Upload -->
     <div>
       <div class="card">
-        <div class="card-title">📤 Upload Document</div>
+        <div class="card-title"><i class="fa-solid fa-upload"></i> Upload Document</div>
         <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">
           Supported: Images (PNG, JPG), PDFs, Receipts
         </p>
@@ -19,7 +19,7 @@
         <form id="uploadForm" enctype="multipart/form-data">
           <div style="border:2px dashed rgba(255,255,255,0.1);border-radius:14px;padding:30px;text-align:center;cursor:pointer;" 
                ondrop="handleDrop(event)" ondragover="handleDragOver(event)" onclick="document.getElementById('fileInput').click()">
-            <div style="font-size:48px;margin-bottom:12px;">📁</div>
+            <div style="font-size:48px;margin-bottom:12px;"><i class="fa-solid fa-file"></i></div>
             <div style="font-size:14px;color:var(--muted);">
               Drop your document here or click to browse
             </div>
@@ -30,7 +30,7 @@
           </div>
           
           <div style="margin-top:12px;display:flex;gap:10px;">
-            <button type="submit" class="btn btn-gold" style="flex:1;" id="parseBtn">🔍 Parse Document</button>
+            <button type="submit" class="btn btn-gold" style="flex:1;" id="parseBtn"><i class="fa-solid fa-magnifying-glass"></i> Parse Document</button>
             <button type="button" class="btn btn-ghost" onclick="clearUpload()">Clear</button>
           </div>
         </form>
@@ -40,7 +40,7 @@
 
       <!-- Extracted Data Preview -->
       <div class="card" id="dataPreview" style="display:none;">
-        <div class="card-title">📊 Extracted Data</div>
+        <div class="card-title"><i class="fa-solid fa-database"></i> Extracted Data</div>
         <div id="extractedData"></div>
       </div>
     </div>
@@ -48,7 +48,7 @@
     <!-- Right Panel: Results -->
     <div>
       <div class="card">
-        <div class="card-title">📝 Parsed Text</div>
+        <div class="card-title"><i class="fa-solid fa-font"></i> Parsed Text</div>
         <div id="parsedText" style="background:rgba(255,255,255,0.02);border-radius:12px;padding:16px;max-height:300px;overflow-y:auto;font-size:13px;line-height:1.8;white-space:pre-wrap;">
           <div class="text-muted" style="text-align:center;padding:40px 0;">
             Upload a document to see parsed text
@@ -57,19 +57,19 @@
       </div>
 
       <div class="card">
-        <div class="card-title">💳 Extracted Transactions</div>
+        <div class="card-title"><i class="fa-solid fa-money-bill-transfer"></i> Extracted Transactions</div>
         <div id="transactionsList">
           <div class="text-muted" style="text-align:center;padding:20px;">
             No transactions extracted yet
           </div>
         </div>
         <button class="btn btn-gold" style="width:100%;margin-top:12px;" onclick="exportExpenses()" id="exportBtn" style="display:none;">
-          📤 Export to Expense Tracker
+          <i class="fa-solid fa-location-crosshairs"></i> Export to Expense Tracker
         </button>
       </div>
 
       <div class="card">
-        <div class="card-title">🏷️ Document Info</div>
+        <div class="card-title"><i class="fa-solid fa-circle-info"></i> Document Info</div>
         <div id="docInfo">
           <div class="text-muted" style="text-align:center;padding:20px;">
             Document type, confidence, and metadata will appear here
@@ -169,7 +169,7 @@
     
     document.getElementById('parseBtn').disabled = true;
     document.getElementById('parseBtn').innerHTML = '<span class="spinner"></span> Parsing...';
-    document.getElementById('uploadStatus').innerHTML = '<div style="color:var(--muted);">⏳ Processing document...</div>';
+    document.getElementById('uploadStatus').innerHTML = '<div style="color:var(--muted);"><i class="fa-solid fa-spinner"></i> Processing document...</div>';
     
     try {
       const response = await fetch('/api/parser/parse', {
@@ -181,17 +181,17 @@
       parsedData = data;
       
       if (data.success) {
-        document.getElementById('uploadStatus').innerHTML = '<div style="color:var(--green);">✅ Document parsed successfully!</div>';
+        document.getElementById('uploadStatus').innerHTML = '<div style="color:var(--green);"><i class="fa-solid fa-circle-check"></i> Document parsed successfully!</div>';
         renderResults(data);
       } else {
-        document.getElementById('uploadStatus').innerHTML = `<div style="color:var(--red);">❌ ${esc(data.error)}</div>`;
+        document.getElementById('uploadStatus').innerHTML = `<div style="color:var(--red);"><i class="fa-solid fa-circle-xmark"></i> ${esc(data.error)}</div>`;
       }
     } catch (error) {
-      document.getElementById('uploadStatus').innerHTML = `<div style="color:var(--red);">❌ ${esc(error.message)}</div>`;
+      document.getElementById('uploadStatus').innerHTML = `<div style="color:var(--red);"><i class="fa-solid fa-circle-xmark"></i> ${esc(error.message)}</div>`;
     }
     
     document.getElementById('parseBtn').disabled = false;
-    document.getElementById('parseBtn').innerHTML = '🔍 Parse Document';
+    document.getElementById('parseBtn').innerHTML = '<i class="fa-solid fa-magnifying-glass"></i> Parse Document';
   });
 
   function renderResults(data) {
@@ -291,7 +291,7 @@
       const result = await response.json();
       
       if (result.success) {
-        alert(`✅ Exported ${result.count} transactions to expense tracker!`);
+        alert(`<i class="fa-solid fa-circle-check"></i> Exported ${result.count} transactions to expense tracker!`);
       } else {
         alert('Error: ' + result.error);
       }

@@ -4,14 +4,14 @@
 
 {% block content %}
 <div id="rebalancer" class="page active">
-  <div class="page-title">🔄 Automated Portfolio <span>Rebalancer</span></div>
+  <div class="page-title"><i class="fa-solid fa-robot"></i> Automated Portfolio <span>Rebalancer</span></div>
 
   <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 1200px;">
     
     <!-- Left Panel: Input -->
     <div>
       <div class="card">
-        <div class="card-title">📊 Portfolio Holdings</div>
+        <div class="card-title"><i class="fa-solid fa-briefcase"></i> Portfolio Holdings</div>
         <div id="holdingsList">
           <div style="text-align:center;padding:20px;color:var(--muted);">No holdings added</div>
         </div>
@@ -25,7 +25,7 @@
       </div>
 
       <div class="card">
-        <div class="card-title">🎯 Target Allocation</div>
+        <div class="card-title"><i class="fa-solid fa-bullseye"></i> Target Allocation</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
           <div>
             <label>Equity (%)</label>
@@ -51,28 +51,28 @@
     <!-- Right Panel: Results -->
     <div>
       <div class="card">
-        <div class="card-title">📈 Current Allocation</div>
+        <div class="card-title"><i class="fa-solid fa-chart-pie"></i> Current Allocation</div>
         <div style="height:250px;">
           <canvas id="allocationChart"></canvas>
         </div>
       </div>
 
       <div class="card">
-        <div class="card-title">📊 Market Signals</div>
+        <div class="card-title"><i class="fa-solid fa-signal"></i> Market Signals</div>
         <div id="marketSignals" style="font-size:13px;color:var(--muted);">
           Click "Analyze" to get market signals
         </div>
       </div>
 
       <div class="card">
-        <div class="card-title">🔄 Rebalancing Trades</div>
+        <div class="card-title"><i class="fa-solid fa-scale-balanced"></i> Rebalancing Trades</div>
         <div id="rebalanceTrades" style="font-size:13px;color:var(--muted);">
           No trades generated yet
         </div>
       </div>
 
       <div class="card">
-        <div class="card-title">💰 Tax-Loss Harvesting</div>
+        <div class="card-title"><i class="fa-solid fa-file-invoice-dollar"></i> Tax-Loss Harvesting</div>
         <div id="taxHarvesting" style="font-size:13px;color:var(--muted);">
           No opportunities identified
         </div>

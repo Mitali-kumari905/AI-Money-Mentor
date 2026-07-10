@@ -4,11 +4,11 @@
 
 {% block content %}
 <div id="ratio_analyzer" class="page active">
-  <div class="page-title">📊 Financial Ratio <span>Analysis Dashboard</span></div>
+  <div class="page-title"><i class="fa-solid fa-scale-balanced"></i> Financial Ratio <span>Analysis Dashboard</span></div>
 
   <!-- Input Section -->
   <div class="card">
-    <h5>📝 Enter Your Financial Data</h5>
+    <h5><i class="fa-solid fa-file-lines"></i> Enter Your Financial Data</h5>
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">
       <div>
         <label>Current Assets (₹)</label>
@@ -71,7 +71,7 @@
         <option value="manufacturing">Manufacturing</option>
         <option value="energy">Energy</option>
       </select>
-      <button class="btn btn-gold" onclick="analyzeRatios()">🔍 Analyze</button>
+      <button class="btn btn-gold" onclick="analyzeRatios()"><i class="fa-solid fa-magnifying-glass"></i> Analyze</button>
     </div>
   </div>
 
@@ -105,38 +105,38 @@
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
       <!-- Liquidity -->
       <div class="card">
-        <h5>💧 Liquidity Ratios</h5>
+        <h5><i class="fa-solid fa-droplet"></i> Liquidity Ratios</h5>
         <div id="liquidityRatios"></div>
       </div>
 
       <!-- Solvency -->
       <div class="card">
-        <h5>🏛️ Solvency Ratios</h5>
+        <h5><i class="fa-solid fa-building-columns"></i> Solvency Ratios</h5>
         <div id="solvencyRatios"></div>
       </div>
 
       <!-- Efficiency -->
       <div class="card">
-        <h5>⚡ Efficiency Ratios</h5>
+        <h5><i class="fa-solid fa-bolt"></i> Efficiency Ratios</h5>
         <div id="efficiencyRatios"></div>
       </div>
 
       <!-- Profitability -->
       <div class="card">
-        <h5>💰 Profitability Ratios</h5>
+        <h5> <i class="fa-solid fa-arrow-trend-up"></i>Profitability Ratios</h5>
         <div id="profitabilityRatios"></div>
       </div>
     </div>
 
     <!-- Peer Comparison -->
     <div class="card">
-      <h5>📊 Peer Comparison</h5>
+      <h5><i class="fa-solid fa-users"></i> Peer Comparison</h5>
       <div id="peerComparison"></div>
     </div>
 
     <!-- Recommendations -->
     <div class="card" id="recommendationsCard">
-      <h5>💡 Recommendations</h5>
+      <h5><i class="fa-solid fa-lightbulb"></i> Recommendations</h5>
       <div id="recommendations"></div>
     </div>
   </div>

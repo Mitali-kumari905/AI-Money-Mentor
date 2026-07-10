@@ -4,7 +4,7 @@
 
 {% block content %}
 <div id="security_settings" class="page active">
-  <div class="page-title">🔐 Security <span>Settings</span></div>
+  <div class="page-title"><i class="fa-solid fa-lock"></i> Security <span>Settings</span></div>
 
   <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 1200px;">
     
@@ -12,7 +12,7 @@
     <div>
       <!-- MFA Status -->
       <div class="card">
-        <div class="card-title">🛡️ MFA Status</div>
+        <div class="card-title"> <i class="fa-solid fa-shield-halved"></i>MFA Status</div>
         <div id="mfaStatus">
           <div class="text-muted">Loading...</div>
         </div>
@@ -20,7 +20,7 @@
 
       <!-- TOTP Setup -->
       <div class="card" id="totpSection">
-        <div class="card-title">📱 TOTP Authenticator</div>
+        <div class="card-title"><i class="fa-solid fa-user-shield"></i> TOTP Authenticator</div>
         <p style="font-size:13px;color:var(--muted);">Set up Google Authenticator for 2FA</p>
         <button class="btn btn-gold" onclick="setupTOTP()" id="totpSetupBtn">📱 Setup TOTP</button>
         <div id="totpSetupArea" style="display:none;margin-top:16px;"></div>
@@ -28,9 +28,9 @@
 
       <!-- Biometrics -->
       <div class="card" id="biometricSection">
-        <div class="card-title">🔑 Biometric Authentication</div>
+        <div class="card-title"><i class="fa-solid fa-fingerprint"></i> Biometric Authentication</div>
         <p style="font-size:13px;color:var(--muted);">Use fingerprint or Face ID for quick access</p>
-        <button class="btn btn-gold" onclick="setupWebAuthn()" id="webauthnBtn">🖐️ Setup Biometrics</button>
+        <button class="btn btn-gold" onclick="setupWebAuthn()" id="webauthnBtn"><i class="fa-solid fa-face-smile"></i> Setup Biometrics</button>
         <div id="webauthnArea" style="display:none;margin-top:16px;"></div>
       </div>
     </div>
@@ -39,7 +39,7 @@
     <div>
       <!-- Trusted Devices -->
       <div class="card">
-        <div class="card-title">💻 Trusted Devices</div>
+        <div class="card-title"><i class="fa-solid fa-mobile-screen-button"></i> Trusted Devices</div>
         <div id="trustedDevices">
           <div class="text-muted" style="text-align:center;padding:20px;">No trusted devices</div>
         </div>
@@ -48,15 +48,15 @@
 
       <!-- Backup Codes -->
       <div class="card">
-        <div class="card-title">📋 Backup Codes</div>
+        <div class="card-title"><i class="fa-solid fa-cloud-arrow-up"></i> Backup Codes</div>
         <p style="font-size:13px;color:var(--muted);">One-time use codes for account recovery</p>
-        <button class="btn btn-gold" onclick="generateBackupCodes()">🔄 Generate New Codes</button>
+        <button class="btn btn-gold" onclick="generateBackupCodes()"><i class="fa-solid fa-rotate-left"></i> Generate New Codes</button>
         <div id="backupCodesArea" style="display:none;margin-top:12px;"></div>
       </div>
 
       <!-- Security Events -->
       <div class="card">
-        <div class="card-title">📜 Security Events</div>
+        <div class="card-title"><i class="fa-solid fa-user-lock"></i> Security Events</div>
         <div id="securityEvents">
           <div class="text-muted" style="text-align:center;padding:20px;">No security events</div>
         </div>

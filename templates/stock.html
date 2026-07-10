@@ -112,7 +112,7 @@
       
       listDiv.innerHTML = alerts.map(a => {
         const badgeColor = a.is_triggered ? 'rgba(46,204,138,0.15)' : 'rgba(212,168,67,0.15)';
-        const badgeText = a.is_triggered ? 'Triggered 🔔' : 'Active ⏳';
+        const badgeText = a.is_triggered ? 'Triggered <i class="fa-solid fa-bell"></i>' : 'Active <i class="fa-solid fa-spinner"></i>';
         const badgeTextColor = a.is_triggered ? '#2ecc8a' : 'var(--gold)';
         const cooldownText = a.cooldown_days > 0 ? ` (${a.cooldown_days}d cooldown)` : '';
         const durationText = a.duration_days > 0 ? ` (${a.duration_days} checks)` : '';
@@ -169,7 +169,7 @@
       if (data.error) {
         showResult('alertSetResult', `⚠ ${data.error}`);
       } else {
-        showResult('alertSetResult', `✅ Alert set for ${symbol}!`);
+        showResult('alertSetResult', `<i class="fa-solid fa-circle-check"></i> Alert set for ${symbol}!`);
         document.getElementById('alertSym').value = '';
         document.getElementById('alertPrice').value = '';
         document.getElementById('alertCooldown').value = '0';

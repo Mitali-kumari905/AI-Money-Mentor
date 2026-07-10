@@ -224,12 +224,12 @@
 
 {% block content %}
 <div id="insurance" class="page active">
-  <div class="page-title">🛡️ Insurance <span>Planner & Optimization</span></div>
+  <div class="page-title"><i class="fa-solid fa-shield-halved"></i> Insurance <span>Planner & Optimization</span></div>
 
   <div class="insurance-grid">
     <!-- LEFT COLUMN: Needs Analysis Form -->
     <div class="card">
-      <div class="card-title">🔍 Needs Analysis</div>
+      <div class="card-title"><i class="fa-solid fa-magnifying-glass"></i> Needs Analysis</div>
       <p style="font-size: 12px; color: var(--muted); margin-bottom: 16px;">Calculate your ideal Life Insurance Cover (Human Life Value) and Health Insurance sum insured.</p>
       
       <form id="recommendationForm" class="calc-form" onsubmit="calculateNeeds(event)">
@@ -298,12 +298,12 @@
     <div>
       <!-- Analysis Results -->
       <div class="card results-card" id="resultsCard" style="display: none;">
-        <div class="card-title">📊 Ideal Coverage Requirements</div>
+        <div class="card-title"><i class="fa-solid fa-lightbulb"></i> Ideal Coverage Requirements</div>
         
         <!-- Life Insurance -->
         <div style="margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid var(--border);">
           <div style="font-weight: 700; color: var(--gold2); font-size: 15px; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
-            <span>💼</span> Life Insurance Cover (HLV)
+            <span><i class="fa-solid fa-briefcase"></i></span> Life Insurance Cover (HLV)
           </div>
           
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
@@ -333,7 +333,7 @@
         <!-- Health Insurance -->
         <div>
           <div style="font-weight: 700; color: var(--teal); font-size: 15px; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
-            <span>🏥</span> Health Insurance Cover
+            <span><i class="fa-solid fa-heart-pulse"></i></span> Health Insurance Cover
           </div>
           
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
@@ -371,7 +371,7 @@
       
       <!-- Placeholder card when no needs analysis saved -->
       <div class="card" id="placeholderCard" style="text-align: center; padding: 40px 20px;">
-        <div style="font-size: 48px; margin-bottom: 12px;">🛡️</div>
+        <div style="font-size: 48px; margin-bottom: 12px;"><i class="fa-solid fa-shield-halved"></i></div>
         <div class="card-title">No Needs Analysis Yet</div>
         <p style="font-size: 13px; color: var(--muted); max-width: 320px; margin: 8px auto 0;">Complete the Needs Analysis form on the left to calculate your gap and unlock personalized AI suggestions.</p>
       </div>
@@ -382,7 +382,7 @@
   <div class="card" style="margin-top: 24px;">
     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
       <div>
-        <div class="card-title">📝 My Policies</div>
+        <div class="card-title"><i class="fa-solid fa-file-contract"></i> My Policies</div>
         <p style="font-size: 12px; color: var(--muted);">Track your active life and health policies below to check coverage gaps.</p>
       </div>
       <button class="btn btn-gold" onclick="openAddPolicyModal()">➕ Log Policy</button>

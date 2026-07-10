@@ -155,7 +155,7 @@
     <!-- Header -->
     <div class="d-flex justify-content-between align-items-center mt-4 mb-4">
         <div>
-            <h1 class="display-5 fw-bold gradient-text">📅 Recurring Expenses</h1>
+            <h1 class="display-5 fw-bold gradient-text"><i class="fa-solid fa-wallet"></i> Recurring Expenses</h1>
             <p class="text-muted">Manage your recurring bills and subscriptions</p>
         </div>
         <a href="/" class="btn btn-outline-secondary">← Back to Dashboard</a>
@@ -195,7 +195,7 @@
             <div class="card" style="background: linear-gradient(135deg, rgba(212, 168, 67, 0.05) 0%, rgba(20, 200, 191, 0.05) 100%); border: 1px solid rgba(212, 168, 67, 0.3);">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h5 class="fw-bold mb-1"><span style="font-size:20px;">✂️</span> AI Subscription Optimizer</h5>
+                        <h5 class="fw-bold mb-1"><span style="font-size:20px;"><i class="fa-solid fa-scissors"></i></span> AI Subscription Optimizer</h5>
                         <p class="text-muted small mb-0">Your projected <strong>Yearly Burn Rate</strong> is <span id="yearlyBurnRate" class="text-white fw-bold">₹0</span>. We identified <span class="text-warning fw-bold">2 unused subscriptions</span>.</p>
                     </div>
                     <div>
@@ -211,17 +211,17 @@
         <div class="col-md-5 mb-4">
             <!-- Auto Detection -->
             <div class="card">
-                <h5 class="fw-bold mb-3">🔍 Auto-Detect Patterns</h5>
+                <h5 class="fw-bold mb-3"><i class="fa-solid fa-magnifying-glass"></i> Auto-Detect Patterns</h5>
                 <p class="text-muted small">Scan last 60 days to find recurring expense patterns</p>
                 <button class="btn btn-gold w-100" onclick="detectRecurring()">
-                    🔍 Scan for Patterns
+                    <i class="fa-solid fa-magnifying-glass"></i> Scan for Patterns
                 </button>
                 <div id="detectionResults" class="mt-3"></div>
             </div>
 
             <!-- Manual Add -->
             <div class="card">
-                <h5 class="fw-bold mb-3">✏️ Add Manually</h5>
+                <h5 class="fw-bold mb-3"><i class="fa-solid fa-pen"></i> Add Manually</h5>
                 <form id="recurringForm">
                     <div class="mb-3">
                         <label class="form-label text-muted small text-uppercase">Merchant</label>
@@ -278,7 +278,7 @@
         <div class="col-md-7 mb-4">
             <div class="card">
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h5 class="fw-bold mb-0">📋 Your Recurring Expenses</h5>
+                    <h5 class="fw-bold mb-0"><i class="fa-solid fa-list"></i> Your Recurring Expenses</h5>
                     <button class="btn btn-outline-secondary btn-sm" onclick="loadRecurring()">🔄 Refresh</button>
                 </div>
                 <div id="recurringList">

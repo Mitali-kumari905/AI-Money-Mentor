@@ -56,7 +56,7 @@ function esc(s){ const d=document.createElement('div'); d.textContent=String(s==
     <div class="container">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
-                <h1 class="text-gold">👫 Couple Finance Planner</h1>
+                <h1 class="text-gold"><i class="fa-solid fa-user-group"></i> Couple Finance Planner</h1>
                 <p class="text-muted">Manage finances together with your partner</p>
             </div>
             <a href="/" class="btn btn-gold">← Back to Dashboard</a>
@@ -119,19 +119,19 @@ function esc(s){ const d=document.createElement('div'); d.textContent=String(s==
                 <div class="row">
                     <div class="col-md-6">
                         <div class="card">
-                            <h5>👥 Partner Info</h5>
+                            <h5><i class="fa-solid fa-heart"></i>  Partner Info</h5>
                             <div id="partnerInfo"></div>
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="card">
-                            <h5>📊 Combined Net Worth</h5>
+                            <h5><i class="fa-solid fa-gem"></i> Combined Net Worth</h5>
                             <canvas id="netWorthChart" height="200"></canvas>
                         </div>
                     </div>
                 </div>
                 <div class="card">
-                    <h5>📋 Recent Activity</h5>
+                    <h5><i class="fa-solid fa-chart-line"></i> Recent Activity</h5>
                     <div id="recentActivity"><div class="text-muted">No activity yet</div></div>
                 </div>
             </div>
@@ -140,7 +140,7 @@ function esc(s){ const d=document.createElement('div'); d.textContent=String(s==
             <div id="tab-goals" class="tab-content" style="display:none;">
                 <div class="card">
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5>🎯 Shared Goals</h5>
+                        <h5><i class="fa-solid fa-bullseye"></i> Shared Goals</h5>
                         <button class="btn btn-gold btn-sm" onclick="showCreateGoal()">+ New Goal</button>
                     </div>
                     <div id="goalsList"></div>
@@ -151,7 +151,7 @@ function esc(s){ const d=document.createElement('div'); d.textContent=String(s==
             <div id="tab-expenses" class="tab-content" style="display:none;">
                 <div class="card">
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5>💳 Split Expenses</h5>
+                        <h5><i class="fa-solid fa-code-branch"></i> Split Expenses</h5>
                         <button class="btn btn-gold btn-sm" onclick="showAddExpense()">+ Add Expense</button>
                     </div>
                     <div id="expenseSummary" class="row mb-3"></div>
@@ -163,7 +163,7 @@ function esc(s){ const d=document.createElement('div'); d.textContent=String(s==
             <div id="tab-budget" class="tab-content" style="display:none;">
                 <div class="card">
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5>📊 Joint Budget</h5>
+                        <h5><i class="fa-solid fa-piggy-bank"></i> Joint Budget</h5>
                         <button class="btn btn-gold btn-sm" onclick="showAddBudget()">+ Add Budget</button>
                     </div>
                     <div id="budgetList"></div>
@@ -173,7 +173,7 @@ function esc(s){ const d=document.createElement('div'); d.textContent=String(s==
             <!-- Tax Tab -->
             <div id="tab-tax" class="tab-content" style="display:none;">
                 <div class="card">
-                    <h5>💸 Tax Optimization for Couples</h5>
+                    <h5><i class="fa-solid fa-sliders"></i> Tax Optimization for Couples</h5>
                     <form id="taxForm" class="mb-3">
                         <div class="row">
                             <div class="col-md-5">
@@ -200,7 +200,7 @@ function esc(s){ const d=document.createElement('div'); d.textContent=String(s==
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">🎯 Create Shared Goal</h5>
+                    <h5 class="modal-title"><i class="fa-solid fa-bullseye"></i> Create Shared Goal</h5>
                     <button type="button" class="close-btn" data-bs-dismiss="modal">×</button>
                 </div>
                 <div class="modal-body">
@@ -232,13 +232,13 @@ function esc(s){ const d=document.createElement('div'); d.textContent=String(s==
                         <div class="mb-3">
                             <label class="form-label text-muted">Icon</label>
                             <select class="form-select" id="goalIcon">
-                                <option value="🏠">🏠 House</option>
-                                <option value="✈️">✈️ Vacation</option>
-                                <option value="💍">💍 Wedding</option>
-                                <option value="🚗">🚗 Car</option>
-                                <option value="📚">📚 Education</option>
-                                <option value="🏦">🏦 Savings</option>
-                                <option value="🎯">🎯 Goal</option>
+                                <option value="🏠"><i class="fa-solid fa-house"></i> House</option>
+                                <option value="✈️"><i class="fa-solid fa-plane"></i> Vacation</option>
+                                <option value="💍"><i class="fa-solid fa-ring"></i> Wedding</option>
+                                <option value="🚗"><i class="fa-solid fa-car"></i> Car</option>
+                                <option value="📚"><i class="fa-solid fa-graduation-cap"></i> Education</option>
+                                <option value="🏦"> <i class="fa-solid fa-sack-dollar"></i>Savings</option>
+                                <option value="🎯"><i class="fa-solid fa-bullseye"></i> Goal</option>
                             </select>
                         </div>
                     </form>
@@ -256,7 +256,7 @@ function esc(s){ const d=document.createElement('div'); d.textContent=String(s==
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">💳 Add Split Expense</h5>
+                    <h5 class="modal-title"><i class="fa-solid fa-code-branch"></i> Add Split Expense</h5>
                     <button type="button" class="close-btn" data-bs-dismiss="modal">×</button>
                 </div>
                 <div class="modal-body">
@@ -348,7 +348,7 @@ function esc(s){ const d=document.createElement('div'); d.textContent=String(s==
                     if (data.has_couple && data.status === 'ACTIVE') {
                         document.getElementById('statusSection').innerHTML = `
                             <div class="alert-box success">
-                                ✅ You are linked with <strong>${data.partner_username || 'your partner'}</strong>
+                                <i class="fa-solid fa-circle-check"></i> You are linked with <strong>${data.partner_username || 'your partner'}</strong>
                                 <button class="btn btn-sm btn-danger float-end" onclick="unlinkCouple()">Unlink</button>
                             </div>
                         `;
@@ -357,14 +357,14 @@ function esc(s){ const d=document.createElement('div'); d.textContent=String(s==
                     } else if (data.has_couple && data.status === 'PENDING') {
                         document.getElementById('statusSection').innerHTML = `
                             <div class="alert-box warning">
-                                ⏳ Invitation sent to ${data.partner_email || 'your partner'}. Waiting for acceptance...
+                                <i class="fa-solid fa-paper-plane"></i> Invitation sent to ${data.partner_email || 'your partner'}. Waiting for acceptance...
                                 <button class="btn btn-sm btn-danger float-end" onclick="unlinkCouple()">Cancel</button>
                             </div>
                         `;
                     } else {
                         document.getElementById('statusSection').innerHTML = `
                             <div class="card">
-                                <h5>👫 Link with Your Partner</h5>
+                                <h5><i class="fa-solid fa-user-group"></i> Link with Your Partner</h5>
                                 <p class="text-muted">Enter your partner's email to start managing finances together</p>
                                 <form id="inviteForm" class="row g-3">
                                     <div class="col-md-8">
@@ -390,17 +390,17 @@ function esc(s){ const d=document.createElement('div'); d.textContent=String(s==
                                 const result = await response.json();
                                 if (result.success) {
                                     document.getElementById('inviteResult').innerHTML = `
-                                        <div class="alert-box success">✅ Invitation sent to ${email}</div>
+                                        <div class="alert-box success"><i class="fa-solid fa-circle-check"></i> Invitation sent to ${email}</div>
                                     `;
                                     loadStatus();
                                 } else {
                                     document.getElementById('inviteResult').innerHTML = `
-                                        <div class="alert-box danger">❌ ${esc(result.error)}</div>
+                                        <div class="alert-box danger"><i class="fa-solid fa-circle-xmark"></i> ${esc(result.error)}</div>
                                     `;
                                 }
                             } catch (error) {
                                 document.getElementById('inviteResult').innerHTML = `
-                                    <div class="alert-box danger">❌ ${esc(error.message)}</div>
+                                    <div class="alert-box danger"><i class="fa-solid fa-circle-xmark"></i> ${esc(error.message)}</div>
                                 `;
                             }
                         });
@@ -507,17 +507,17 @@ function esc(s){ const d=document.createElement('div'); d.textContent=String(s==
             
             // Show some goals
             if (data.goals && data.goals.length > 0) {
-                html += `<div class="alert-box info">🎯 ${data.goals.length} shared goals active</div>`;
+                html += `<div class="alert-box info"><i class="fa-solid fa-bullseye"></i> ${data.goals.length} shared goals active</div>`;
             }
             
             // Show some expenses
             if (data.expense_summary) {
-                html += `<div class="alert-box success">💳 ${data.expense_summary.total_expenses || 0} total expenses</div>`;
+                html += `<div class="alert-box success"><i class="fa-solid fa-wallet"></i> ${data.expense_summary.total_expenses || 0} total expenses</div>`;
             }
             
             // Show tax plan
             if (data.tax_plan) {
-                html += `<div class="alert-box info">💸 Tax optimization available</div>`;
+                html += `<div class="alert-box info"><i class="fa-solid fa-sliders"></i> Tax optimization available</div>`;
             }
             
             container.innerHTML = html || '<div class="text-muted">No activity yet</div>';
@@ -889,10 +889,10 @@ function esc(s){ const d=document.createElement('div'); d.textContent=String(s==
                         </div>
                     `;
                 } else {
-                    document.getElementById('taxResult').innerHTML = `<div class="alert-box danger">❌ ${data.error || 'Unable to analyze'}</div>`;
+                    document.getElementById('taxResult').innerHTML = `<div class="alert-box danger"><i class="fa-solid fa-circle-xmark"></i> ${data.error || 'Unable to analyze'}</div>`;
                 }
             } catch (error) {
-                document.getElementById('taxResult').innerHTML = `<div class="alert-box danger">❌ ${esc(error.message)}</div>`;
+                document.getElementById('taxResult').innerHTML = `<div class="alert-box danger"><i class="fa-solid fa-circle-xmark"></i> ${esc(error.message)}</div>`;
             }
         });
     </script>

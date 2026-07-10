@@ -37,7 +37,7 @@
     <div class="container">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
-                <h1 class="text-gold">🏦 Core Banking Ledger</h1>
+                <h1 class="text-gold"><i class="fa-solid fa-building-columns"></i> Core Banking Ledger</h1>
                 <p class="text-muted">Double-Entry Accounting System</p>
             </div>
             <a href="/" class="btn btn-gold">← Back to Dashboard</a>
@@ -66,7 +66,7 @@
             <div class="col-md-3">
                 <div class="stat-card">
                     <div class="label">Status</div>
-                    <div class="value" style="font-size:16px;" id="systemStatus">✅ Active</div>
+                    <div class="value" style="font-size:16px;" id="systemStatus"><i class="fa-solid fa-circle-check"></i> Active</div>
                 </div>
             </div>
         </div>
@@ -76,7 +76,7 @@
             <div class="col-md-6">
                 <div class="card">
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5>💳 Accounts</h5>
+                        <h5><i class="fa-solid fa-user"></i> Accounts</h5>
                         <button class="btn btn-gold btn-sm" onclick="showCreateAccount()">+ New Account</button>
                     </div>
                     <div id="accountsList">
@@ -86,7 +86,7 @@
 
                 <!-- Create Account Form -->
                 <div class="card" id="createAccountForm" style="display:none;">
-                    <h5>📝 Create New Account</h5>
+                    <h5><i class="fa-solid fa-user"></i> Create New Account</h5>
                     <form id="accountForm">
                         <div class="mb-3">
                             <label class="form-label text-muted">Account Name</label>
@@ -114,7 +114,7 @@
             <!-- Right: Transfer -->
             <div class="col-md-6">
                 <div class="card">
-                    <h5>🔄 Transfer Money</h5>
+                    <h5><i class="fa-solid fa-money-bill-transfer"></i> Transfer Money</h5>
                     <form id="transferForm">
                         <div class="mb-3">
                             <label class="form-label text-muted">From Account</label>
@@ -132,22 +132,22 @@
                             <label class="form-label text-muted">Description</label>
                             <input type="text" class="form-control" id="transferDesc" placeholder="Optional description">
                         </div>
-                        <button type="submit" class="btn btn-gold w-100">💰 Transfer</button>
+                        <button type="submit" class="btn btn-gold w-100"> Transfer</button>
                     </form>
                 </div>
 
                 <!-- Quick Actions -->
                 <div class="card">
-                    <h5>⚡ Quick Actions</h5>
+                    <h5><i class="fa-solid fa-bolt"></i> Quick Actions</h5>
                     <div class="row g-2">
                         <div class="col-6">
-                            <button class="btn btn-success w-100" onclick="quickDeposit()">📥 Deposit</button>
+                            <button class="btn btn-success w-100" onclick="quickDeposit()"><i class="fa-solid fa-arrow-down"></i> Deposit</button>
                         </div>
                         <div class="col-6">
-                            <button class="btn btn-danger w-100" onclick="quickWithdraw()">📤 Withdraw</button>
+                            <button class="btn btn-danger w-100" onclick="quickWithdraw()"><i class="fa-solid fa-arrow-up"></i> Withdraw</button>
                         </div>
                         <div class="col-12">
-                            <button class="btn btn-ghost w-100" onclick="reconcileAll()">🔍 Reconcile All</button>
+                            <button class="btn btn-ghost w-100" onclick="reconcileAll()"><i class="fa-solid fa-magnifying-glass"></i> Reconcile All</button>
                         </div>
                     </div>
                 </div>
@@ -156,7 +156,7 @@
 
         <!-- Transaction History -->
         <div class="card">
-            <h5>📊 Transaction History</h5>
+            <h5><i class="fa-solid fa-clock-rotate-left"></i> Transaction History</h5>
             <div id="transactionHistory">
                 <div class="text-center text-muted py-4">Select an account to view transactions</div>
             </div>

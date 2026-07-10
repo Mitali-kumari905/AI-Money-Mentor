@@ -8,15 +8,15 @@
 
 {% block content %}
 <div id="dashboard" class="page active">
-    <div class="page-title">📊 Custom <span>Dashboard</span></div>
+    <div class="page-title"><i class="fa-solid fa-gauge-high"></i> Custom <span>Dashboard</span></div>
 
     <!-- Toolbar -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
         <div style="display:flex;gap:10px;flex-wrap:wrap;">
-            <button class="btn btn-gold" onclick="dashboardManager.saveLayouts()">💾 Save Layout</button>
-            <button class="btn btn-ghost" onclick="resetLayout()">🔄 Reset Default</button>
-            <button class="btn btn-ghost" onclick="exportLayout()">📤 Export</button>
-            <button class="btn btn-ghost" onclick="importLayout()">📥 Import</button>
+            <button class="btn btn-gold" onclick="dashboardManager.saveLayouts()"><i class="fa-solid fa-floppy-disk"></i> Save Layout</button>
+            <button class="btn btn-ghost" onclick="resetLayout()"><i class="fa-solid fa-rotate-left"></i> Reset Default</button>
+            <button class="btn btn-ghost" onclick="exportLayout()"><i class="fa-solid fa-file-export"></i> Export</button>
+            <button class="btn btn-ghost" onclick="importLayout()"><i class="fa-solid fa-file-import"></i> Import</button>
         </div>
         <div style="display:flex;gap:6px;align-items:center;">
             <span style="font-size:12px;color:#5a6a82;">Drag widgets to rearrange</span>

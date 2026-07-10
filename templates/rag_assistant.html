@@ -33,7 +33,7 @@
     <div class="container">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
-                <h1 class="text-gold">🧠 RAG Knowledge Assistant</h1>
+                <h1 class="text-gold"><i class="fa-solid fa-brain"></i> RAG Knowledge Assistant</h1>
                 <p class="text-muted">Upload documents and ask questions about them</p>
             </div>
             <a href="/" class="btn btn-gold">← Back to Dashboard</a>
@@ -43,7 +43,7 @@
             <!-- Left: Upload & Documents -->
             <div class="col-md-4">
                 <div class="card">
-                    <h5>📄 Upload Document</h5>
+                    <h5><i class="fa-solid fa-upload"></i> Upload Document</h5>
                     <form id="uploadForm">
                         <div class="mb-3">
                             <label class="form-label text-muted">Select Document</label>
@@ -63,21 +63,21 @@
                 </div>
 
                 <div class="card">
-                    <h5>📚 Uploaded Documents</h5>
+                    <h5><i class="fa-solid fa-upload"></i> Uploaded Documents</h5>
                     <div id="documentsList">
                         <div class="text-center text-muted py-4">No documents uploaded yet</div>
                     </div>
-                    <button class="btn btn-danger w-100 mt-3" onclick="clearAll()">🗑️ Clear All Documents</button>
+                    <button class="btn btn-danger w-100 mt-3" onclick="clearAll()"><i class="fa-solid fa-trash"></i> Clear All Documents</button>
                 </div>
             </div>
 
             <!-- Right: Chat -->
             <div class="col-md-8">
                 <div class="card">
-                    <h5>💬 Ask Questions</h5>
+                    <h5><i class="fa-solid fa-comments"></i> Ask Questions</h5>
                     <div class="chat-messages" id="chatMessages">
                         <div class="text-center text-muted py-4" id="chatWelcome">
-                            <div style="font-size: 48px;">📚</div>
+                            <div style="font-size: 48px;"><i class="fa-solid fa-file-lines"></i></div>
                             <p class="mt-2">Upload a document and ask questions about it</p>
                             <p class="small">Supported: PDF, DOCX, XLSX, TXT, PNG, JPG</p>
                         </div>
