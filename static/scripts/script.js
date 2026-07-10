@@ -1,3 +1,10 @@
+// HTML escape helper
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = String(s ?? '');
+  return d.innerHTML;
+}
+
 // Navigation
 document.querySelectorAll('.nav-item').forEach(el => {
     el.addEventListener('click', function() {
@@ -108,9 +115,20 @@ function updatePortfolioUI(holdings, summary) {
     const tbody = document.getElementById('portfolioTableBody');
     tbody.innerHTML = '';
     holdings.forEach(h => {
-    tbody.innerHTML += `<tr><td><strong>${h.symbol}</strong><br><small>${h.name}</small></td><td style="text-align:right">${h.quantity}</td><td style="text-align:right">₹${fmtNum(h.buy_price)}</td><td style="text-align:right">₹${fmtNum(h.current_price)}</td><td style="text-align:right">₹${fmtNum(h.invested)}</td><td style="text-align:right">₹${fmtNum(h.current)}</td><td style="text-align:right" class="positive">+₹${fmtNum(h.pnl)} (${h.pnlPercent}%)</td><td><button class="btn btn-ghost" style="padding:4px 8px;" onclick="deleteFromPortfolio(${h.id})">✖</button></td></tr>`;
-    });
-    
+    const row = document.createElement('tr');
+    row.innerHTML = `<td><strong>${esc(h.symbol)}</strong><br><small>${esc(h.name)}</small></td><td style="text-align:right">${h.quantity}</td><td style="text-align:right">₹${fmtNum(h.buy_price)}</td><td style="text-align:right">₹${fmtNum(h.current_price)}</td><td style="text-align:right">₹${fmtNum(h.invested)}</td><td style="text-align:right">₹${fmtNum(h.current)}</td><td style="text-align:right" class="positive">+₹${fmtNum(h.pnl)} (${h.pnlPercent}%)</td><td><button class="btn btn-ghost" style="padding:4px 8px;" data-portfolio-id="${h.id}">✖</button></td>`;
+    tbody.appendChild(row);
+});
+
+    // Delete button delegation (set up once)
+    if (!window._portDelSetup) {
+        window._portDelSetup = true;
+        tbody.addEventListener('click', function(e) {
+            const btn = e.target.closest('button[data-portfolio-id]');
+            if (btn) deleteFromPortfolio(parseInt(btn.dataset.portfolioId));
+        });
+    }
+
     // Create chart
     const canvas = document.getElementById('portfolioAllocationChart');
     if (canvas) {
@@ -126,7 +144,7 @@ function updatePortfolioUI(holdings, summary) {
     // Top performers
     const sorted = [...holdings].sort((a, b) => parseFloat(b.pnlPercent) - parseFloat(a.pnlPercent));
     document.getElementById('topPerformers').innerHTML = sorted.map(p => `
-    <div class="performer-card"><div><strong>${p.symbol}</strong><br><small>${p.name}</small></div><div class="positive">+${p.pnlPercent}%<br><small>+₹${fmtNum(p.pnl)}</small></div></div>
+    <div class="performer-card"><div><strong>${esc(p.symbol)}</strong><br><small>${esc(p.name)}</small></div><div class="positive">+${p.pnlPercent}%<br><small>+₹${fmtNum(p.pnl)}</small></div></div>
     `).join('');
 }
 
@@ -156,7 +174,7 @@ async function loadAlerts() {
     const data = await res.json();
     const alertsDiv = document.getElementById('alertsList');
     if (data.success && data.alerts.length) {
-    alertsDiv.innerHTML = data.alerts.map(a => `<div style="display:flex;justify-content:space-between;padding:10px;border-bottom:1px solid var(--border);"><span><strong>${a.symbol}</strong> ${a.condition} ₹${a.target_price}</span><span class="${a.is_triggered ? 'positive' : ''}">${a.is_triggered ? '✓ Triggered' : '● Active'}</span></div>`).join('');
+    alertsDiv.innerHTML = data.alerts.map(a => `<div style="display:flex;justify-content:space-between;padding:10px;border-bottom:1px solid var(--border);"><span><strong>${esc(a.symbol)}</strong> ${esc(a.condition)} ₹${a.target_price}</span><span class="${a.is_triggered ? 'positive' : ''}">${a.is_triggered ? '✓ Triggered' : '● Active'}</span></div>`).join('');
     } else {
     alertsDiv.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);">No alerts set</div>';
     }
@@ -193,11 +211,12 @@ function appendMsg(boxId, role, text) {
     let content;
 
     if (role === 'bot') {
+        // Bot messages: pre-sanitized via DOMPurify + marked (intentional rich HTML)
         content = DOMPurify.sanitize(
             marked.parse(text || '')
         );
     } else {
-        content = text;
+        content = esc(text);
     }
 
     d.innerHTML = `
@@ -264,7 +283,7 @@ async function calcSIP() {
 async function checkStock() {
     const res = await fetch('/portfolio', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ stock: document.getElementById('stockSym').value }) });
     const data = await res.json();
-    document.getElementById('stockResult').innerHTML = `<div><strong>${data.symbol}</strong> ₹${fmtNum(data.price)}</div><div>${data.analysis}</div>`;
+    document.getElementById('stockResult').innerHTML = `<div><strong>${esc(data.symbol)}</strong> ₹${fmtNum(data.price)}</div><div>${esc(data.analysis)}</div>`;
 }
 
 async function calcTax() {
@@ -276,7 +295,7 @@ async function calcTax() {
 async function calcScore() {
     const res = await fetch('/money-score', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ income: parseFloat(document.getElementById('s_income').value), expenses: parseFloat(document.getElementById('s_expenses').value), savings: parseFloat(document.getElementById('s_savings').value), investments: parseFloat(document.getElementById('s_invest').value), debt: parseFloat(document.getElementById('s_debt').value), emergency: parseFloat(document.getElementById('s_emergency').value) }) });
     const data = await res.json();
-    document.getElementById('scoreResult').innerHTML = `<div class="positive" style="font-size:24px;font-weight:800;">Score: ${data.score}</div><div>${data.status}</div>`;
+    document.getElementById('scoreResult').innerHTML = `<div class="positive" style="font-size:24px;font-weight:800;">Score: ${data.score}</div><div>${esc(data.status)}</div>`;
 }
 
 async function uploadPDF() {
@@ -308,7 +327,7 @@ async function addExpenseWithAI() {
 async function detectAnomalies() {
     const res = await fetch('/anomaly_detection');
     const data = await res.json();
-    document.getElementById('anomaliesResult').innerHTML = data.anomalies?.length ? data.anomalies.map(a => `<div class="performer-card">⚠️ ${a.reason}</div>`).join('') : '<div>No anomalies</div>';
+    document.getElementById('anomaliesResult').innerHTML = data.anomalies?.length ? data.anomalies.map(a => `<div class="performer-card">⚠️ ${esc(a.reason)}</div>`).join('') : '<div>No anomalies</div>';
 }
 
 async function loadNetWorth() {
@@ -317,8 +336,8 @@ async function loadNetWorth() {
     document.getElementById('nwAssets').innerHTML = `₹${fmtNum(data.total_assets)}`;
     document.getElementById('nwLiabilities').innerHTML = `₹${fmtNum(data.total_liabilities)}`;
     document.getElementById('nwTotal').innerHTML = `₹${fmtNum(data.net_worth)}`;
-    document.getElementById('assetList').innerHTML = data.assets.map(a => `<div style="padding:8px;border-bottom:1px solid var(--border);">${a.name}: ₹${fmtNum(a.amount)}</div>`).join('');
-    document.getElementById('liabList').innerHTML = data.liabilities.map(l => `<div style="padding:8px;border-bottom:1px solid var(--border);">${l.name}: ₹${fmtNum(l.amount)}</div>`).join('');
+    document.getElementById('assetList').innerHTML = data.assets.map(a => `<div style="padding:8px;border-bottom:1px solid var(--border);">${esc(a.name)}: ₹${fmtNum(a.amount)}</div>`).join('');
+    document.getElementById('liabList').innerHTML = data.liabilities.map(l => `<div style="padding:8px;border-bottom:1px solid var(--border);">${esc(l.name)}: ₹${fmtNum(l.amount)}</div>`).join('');
 }
 
 async function addNWItem(type) {
@@ -392,7 +411,7 @@ function renderBudgetTable() {
     const diff = c.budgeted - c.spent;
     return `
         <tr>
-        <td style="text-align:left;font-weight:600;">${c.name}</td>
+        <td style="text-align:left;font-weight:600;">${esc(c.name)}</td>
         <td style="text-align:right;">₹${fmtNum(c.budgeted)}</td>
         <td style="text-align:right;" class="${statusClass}">₹${fmtNum(c.spent)}</td>
         <td style="text-align:right;" class="${diff < 0 ? 'negative' : 'positive'}">${diff < 0 ? '-' : '+'}₹${fmtNum(Math.abs(diff))}</td>
@@ -402,7 +421,7 @@ function renderBudgetTable() {
             </div>
             <div style="font-size:10px;color:var(--muted);margin-top:3px;">${pct}% used</div>
         </td>
-        <td><button class="btn btn-ghost" style="padding:4px 8px;" onclick="removeBudgetCategory(${i})">✖</button></td>
+        <td><button class="btn btn-ghost" style="padding:4px 8px;" data-budget-idx="${i}">✖</button></td>
         </tr>`;
     }).join('');
 
@@ -418,6 +437,11 @@ function renderBudgetTable() {
         </tr></thead>
         <tbody>${rows}</tbody>
     </table>`;
+    // Delete button delegation
+    container.addEventListener('click', function(e) {
+        const btn = e.target.closest('button[data-budget-idx]');
+        if (btn) removeBudgetCategory(parseInt(btn.dataset.budgetIdx));
+    });
 }
 
 function updateBudgetStats() {
@@ -494,6 +518,7 @@ async function analyzeBudget() {
 
     if (data.success) {
         const s = data.summary;
+        // AI budget advice is pre-sanitized rich text from LLM (intentional HTML)
         adviceDiv.innerHTML = `
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;">
             <div style="background:rgba(20,200,191,0.08);border-radius:12px;padding:12px;text-align:center;">
@@ -511,7 +536,7 @@ async function analyzeBudget() {
         </div>
         <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:14px;padding:16px;font-size:13px;line-height:1.7;white-space:pre-wrap;">${data.advice}</div>`;
     } else {
-        adviceDiv.innerHTML = `<div class="negative" style="font-size:13px;">Error: ${data.error}</div>`;
+        adviceDiv.innerHTML = `<div class="negative" style="font-size:13px;">Error: ${esc(data.error)}</div>`;
     }
     } catch (e) {
     adviceDiv.innerHTML = `<div class="negative" style="font-size:13px;">Failed to get AI advice. Check your connection.</div>`;

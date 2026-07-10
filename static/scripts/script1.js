@@ -1,3 +1,10 @@
+    // HTML escape helper
+    function esc(s) {
+      const d = document.createElement('div');
+      d.textContent = String(s ?? '');
+      return d.innerHTML;
+    }
+
     // Scroll to Top visibility toggle
     document.querySelector('.main').addEventListener('scroll', function () {
       const btn = document.getElementById('scrollTopBtn');
@@ -146,7 +153,7 @@
             <span>${role === 'user' ? 'You' : 'AI Advisor'}</span>
             ${role === 'bot' ? '<button class="btn-ghost copy-btn" style="padding: 4px 10px; font-size: 11px; border-radius: 6px; cursor: pointer; height: 26px; border-width: 1px; font-family: inherit; display: inline-flex; align-items: center; gap: 4px;">📋 Copy</button>' : ''}
         </div>
-        ${text}
+        ${role === 'user' ? esc(text) : text}
       `;
       if (role === 'bot') {
           const btn = d.querySelector('.copy-btn');
@@ -829,7 +836,7 @@
                     </td>
 
                     <td style="padding:10px;border-bottom:1px solid #222;">
-                        ${expense.category}
+                        ${esc(expense.category)}
                     </td>
 
                     <td style="padding:10px;border-bottom:1px solid #222;">
