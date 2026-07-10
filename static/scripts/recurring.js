@@ -1,3 +1,10 @@
+// HTML escape helper (issue #517)
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = String(s ?? '');
+  return d.innerHTML;
+}
+
 // Recurring Expenses - JavaScript
 
 // Load recurring expenses
@@ -20,7 +27,7 @@ function loadRecurring() {
                 updateStats(data.recurring);
             } else {
                 container.innerHTML = `
-                    <div class="alert alert-danger">❌ Error: ${data.error}</div>
+                    <div class="alert alert-danger">❌ Error: ${esc(data.error)}</div>
                 `;
             }
         })
@@ -76,7 +83,7 @@ function renderRecurringList(recurring) {
         html += `
             <tr>
                 <td><strong>${r.merchant || 'N/A'}</strong></td>
-                <td><span class="badge bg-secondary">${r.category}</span></td>
+                <td><span class="badge bg-secondary">${esc(r.category)}</span></td>
                 <td><strong>₹${formatNumber(r.amount)}</strong></td>
                 <td>${frequencyLabels[r.frequency] || r.frequency}</td>
                 <td>${formatDate(r.next_due_date)}</td>
@@ -196,7 +203,7 @@ function detectRecurring() {
         .catch(err => {
             btn.disabled = false;
             btn.textContent = '🔍 Scan for Patterns';
-            container.innerHTML = `<div class="alert alert-danger">❌ Error: ${err.message}</div>`;
+            container.innerHTML = `<div class="alert alert-danger">❌ Error: ${esc(err.message)}</div>`;
         });
 }
 

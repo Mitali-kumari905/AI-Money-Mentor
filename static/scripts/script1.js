@@ -271,7 +271,7 @@
         });
 
         if (data.error) {
-          showResult('scoreResult', `⚠ ${data.error}`);
+          showResult('scoreResult', `⚠ ${esc(data.error)}`);
         } else {
           const color = data.score >= 80 ? '#2ecc8a' : data.score >= 60 ? '#d4a843' : '#e05252';
           const circumference = 2 * Math.PI * 54;
@@ -289,7 +289,7 @@
                 </svg>
                 <div class="score-text-overlay">
                   <div style="font-family:'Outfit',sans-serif;font-size:42px;font-weight:800;color:${color}">${data.score}</div>
-                  <div style="font-size:11px;font-weight:600;color:var(--text);margin-top:-2px">${data.status}</div>
+                  <div style="font-size:11px;font-weight:600;color:var(--text);margin-top:-2px">${esc(data.status)}</div>
                 </div>
               </div>
             </div>
@@ -372,7 +372,7 @@
         });
 
         if (data.error) {
-          showResult('sipResult', `⚠ ${data.error}`);
+          showResult('sipResult', `⚠ ${esc(data.error)}`);
         } else {
           const fv = data.future_value;
           showResult('sipResult', `
@@ -471,7 +471,7 @@
         const data = await apiFetch('/portfolio', { stock: sym });
 
         if (data.error) {
-          showResult('stockResult', `⚠ ${data.error}`);
+          showResult('stockResult', `⚠ ${esc(data.error)}`);
         } else {
           // Display Stock details table
           const metrics = data.metrics || {};
@@ -487,7 +487,7 @@
           }
 
           let html = `
-            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em">${data.symbol} — Last Price</div>
+            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em">${esc(data.symbol)} — Last Price</div>
             <div class="result-big">₹${fmtNum(data.price)}</div>
             <div style="margin-top: 14px; display: flex; flex-direction: column; gap: 6px; font-size: 12px; border-top: 1px solid var(--border); padding-top: 10px;">
               <div style="display:flex; justify-content:space-between"><span>52W High</span><strong>₹${metrics.high_52w !== "N/A" && metrics.high_52w !== null ? fmtNum(metrics.high_52w) : "N/A"}</strong></div>
@@ -559,7 +559,7 @@
         const data = await apiFetch('/tax', { income: parseFloat(income) });
 
         if (data.error) {
-          showResult('taxResult', `⚠ ${data.error}`);
+          showResult('taxResult', `⚠ ${esc(data.error)}`);
         } else {
           const taxRes = data.tax;
           document.getElementById('taxComparisonCard').style.display = 'block';
@@ -608,14 +608,14 @@
             </table>
             
             <div style="margin-top:16px; padding:12px 14px; background:rgba(46,204,138,0.08); border:1px solid rgba(46,204,138,0.2); border-radius:8px; color:#2ecc8a; font-size:13px; line-height:1.5;">
-              <strong>Recommendation:</strong> Select the <strong>${taxRes.recommended}</strong>.<br/>
+              <strong>Recommendation:</strong> Select the <strong>${esc(taxRes.recommended)}</strong>.<br/>
               You will save <strong>₹${fmtNum(taxRes.savings)}</strong> annually with this regime.
             </div>
           `;
           document.getElementById('taxComparisonResult').innerHTML = tableHtml;
 
           showResult('taxResult', `
-            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em">Tax Payable (${taxRes.recommended})</div>
+            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em">Tax Payable (${esc(taxRes.recommended)})</div>
             <div class="result-big" style="color:#2ecc8a;">₹${fmtNum(taxRes.recommended === "New Regime" ? taxRes.new_regime.total_tax : taxRes.old_regime.total_tax)}</div>
             <div style="font-size:12px;color:var(--muted);margin-top:4px">Annual Savings: ₹${fmtNum(taxRes.savings)}</div>
           `);
@@ -640,7 +640,7 @@
       try {
         const data = await apiFetch('/upload', form, true);
         if (data.error) {
-          showResult('pdfResult', `⚠ ${data.error}`);
+          showResult('pdfResult', `⚠ ${esc(data.error)}`);
         } else {
           // Parse structured document data
           if (data.data && typeof data.data === 'object') {
@@ -703,7 +703,7 @@
       try {
         const data = await apiFetch('/agent', { query });
         if (data.error) {
-          showResult('agentResult', `⚠ ${data.error}`);
+          showResult('agentResult', `⚠ ${esc(data.error)}`);
         } else {
           const resp = data.response || JSON.stringify(data);
           showResult('agentResult', `<div style="white-space:pre-wrap;font-size:13px;line-height:1.7">${resp}</div>`);
@@ -803,7 +803,7 @@
 
         document.getElementById("totalCard").innerHTML = `
             <h2>Total Spend</h2>
-            <p>₹${calcData.Total || 0}</p>
+            <p>₹${esc(calcData.Total || 0)}</p>
         `;
 
         /* ---------- AVERAGE CARD ---------- */
@@ -840,7 +840,7 @@
                     </td>
 
                     <td style="padding:10px;border-bottom:1px solid #222;">
-                        ₹${expense.amount}
+                        ₹${esc(expense.amount)}
                     </td>
                 </tr>
             `;
@@ -986,7 +986,7 @@
           data.assets.forEach((item, idx) => {
             assetList.innerHTML += `
               <tr style="border-bottom: 1px solid var(--border);">
-                <td style="padding: 8px;">${item.name}</td>
+                <td style="padding: 8px;">${esc(item.name)}</td>
                 <td style="padding: 8px; text-align: right;">₹${fmtNum(item.amount)}</td>
                 <td style="padding: 8px; text-align: center;"><button class="btn btn-ghost" style="padding: 4px 8px; font-size: 10px;" onclick="deleteNWItem('asset', ${idx})">✖</button></td>
               </tr>
@@ -1002,7 +1002,7 @@
           data.liabilities.forEach((item, idx) => {
             liabList.innerHTML += `
                 <tr style="border-bottom: 1px solid var(--border);">
-                  <td style="padding: 8px;">${item.name}</td>
+                  <td style="padding: 8px;">${esc(item.name)}</td>
                   <td style="padding: 8px; text-align: right;">₹${fmtNum(item.amount)}</td>
                   <td style="padding: 8px; text-align: center;"><button class="btn btn-ghost" style="padding: 4px 8px; font-size: 10px;" onclick="deleteNWItem('liability', ${idx})">✖</button></td>
                 </tr>
@@ -1110,7 +1110,7 @@
 
 <div>
 
-<h3>${goal.name}</h3>
+<h3>${esc(goal.name)}</h3>
 
 <div class="goal-amount">
 ₹${goal.saved.toLocaleString()}

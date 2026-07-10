@@ -1,3 +1,10 @@
+// HTML escape helper (issue #517)
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = String(s ?? '');
+  return d.innerHTML;
+}
+
 // Retirement Simulator - Complete Working Code
 
 let growthChart = null;

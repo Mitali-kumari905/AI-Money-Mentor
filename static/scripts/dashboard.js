@@ -1,3 +1,10 @@
+// HTML escape helper (issue #517)
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = String(s ?? '');
+  return d.innerHTML;
+}
+
 // Interactive Dashboard with Drag-and-Drop Widgets
 
 class DashboardManager {
@@ -98,15 +105,15 @@ class DashboardManager {
         div.innerHTML = `
             <div class="widget-header">
                 <span class="drag-handle">⠿</span>
-                <span class="widget-title">${widget.title}</span>
+                <span class="widget-title">${esc(widget.title)}</span>
                 <div class="widget-actions">
                     ${widget.id !== 'add_widget' ? `
-                        <button onclick="dashboardManager.removeWidget('${widget.id}')" title="Remove">✖</button>
+                        <button onclick="dashboardManager.removeWidget('${esc(widget.id)}')" title="Remove">✖</button>
                     ` : ''}
-                    <button onclick="dashboardManager.refreshWidget('${widget.id}')" title="Refresh">⟳</button>
+                    <button onclick="dashboardManager.refreshWidget('${esc(widget.id)}')" title="Refresh">⟳</button>
                 </div>
             </div>
-            <div class="widget-content" id="widget-content-${widget.id}">
+            <div class="widget-content" id="widget-content-${esc(widget.id)}">
                 <div style="text-align:center;padding:20px;color:#5a6a82;">
                     <div class="spinner"></div>
                     <div style="margin-top:8px;">Loading...</div>
@@ -274,7 +281,7 @@ class DashboardManager {
                 <div style="margin-top:8px;">
                     ${data.categories.map(c => `
                         <div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0;">
-                            <span>${c.name}</span>
+                            <span>${esc(c.name)}</span>
                             <span>₹${this.formatNumber(c.spent)} / ₹${this.formatNumber(c.budget)}</span>
                         </div>
                     `).join('')}
@@ -289,8 +296,8 @@ class DashboardManager {
                 ${data.transactions.map(t => `
                     <div class="transaction-item">
                         <div>
-                            <div>${t.category}</div>
-                            <div style="font-size:11px;color:#5a6a82;">${t.date}</div>
+                            <div>${esc(t.category)}</div>
+                            <div style="font-size:11px;color:#5a6a82;">${esc(t.date)}</div>
                         </div>
                         <div style="font-weight:600;color:${t.amount < 0 ? '#e05252' : '#2ecc8a'};">
                             ${t.amount < 0 ? '-' : '+'}₹${this.formatNumber(Math.abs(t.amount))}
@@ -313,7 +320,7 @@ class DashboardManager {
                 </div>
                 ${data.holdings.map(h => `
                     <div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0;border-bottom:1px solid rgba(255,255,255,0.04);">
-                        <span>${h.symbol}</span>
+                        <span>${esc(h.symbol)}</span>
                         <span>₹${this.formatNumber(h.value)} (${h.percent}%)</span>
                     </div>
                 `).join('')}
@@ -327,7 +334,7 @@ class DashboardManager {
                 ${data.goals.map(g => `
                     <div class="goal-item">
                         <div style="display:flex;justify-content:space-between;font-size:13px;">
-                            <span>${g.name}</span>
+                            <span>${esc(g.name)}</span>
                             <span>${g.progress}%</span>
                         </div>
                         <div class="goal-progress-bar">
@@ -399,11 +406,11 @@ class DashboardManager {
                     <h3 style="color:#d4a843;margin-bottom:16px;">➕ Add Widget</h3>
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                         ${widgetTypes.map(w => `
-                            <button onclick="dashboardManager.addWidget('${w.id}','${w.title}')" 
+                            <button onclick="dashboardManager.addWidget('${esc(w.id)}','${esc(w.title)}')" 
                                     style="padding:10px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:8px;color:#eef0f5;cursor:pointer;transition:all 0.2s;"
                                     onmouseover="this.style.borderColor='#d4a843'" 
                                     onmouseout="this.style.borderColor='rgba(255,255,255,0.06)'">
-                                ${w.title}
+                                ${esc(w.title)}
                             </button>
                         `).join('')}
                     </div>
