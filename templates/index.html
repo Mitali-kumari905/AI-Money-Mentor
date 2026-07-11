@@ -1378,6 +1378,12 @@
 
     }
 
+
+    .empty-state {
+  font-style: italic;
+  color: var(--muted);
+}
+
     /* ===== SAFETY INDICATOR ===== */
     .safety-indicator {
       font-size: 11px;
@@ -3371,6 +3377,22 @@ replace emojis
               <tr><th style="padding: 8px;">Asset</th><th style="padding: 8px; text-align: right;">Value</th><th style="padding: 8px; text-align: center;">Action</th></tr>
             </thead>
             <tbody id="assetList"></tbody>
+            <tbody id="assetList">
+
+  <tr class="empty-state"><td colspan="3" style="text-align:center; color:var(--muted); padding:12px;">
+    No assets added yet
+  </td>
+</tr>
+</tbody>
+
+
+<tbody id="liabList">
+  <tr class="empty-state"><td colspan="3" style="text-align:center; color:var(--muted); padding:12px;">
+    No liabilities added yet
+  </td>
+</tr>
+</tbody>
+
           </table>
         </div>
 
@@ -3499,6 +3521,17 @@ replace emojis
         overlay.classList.remove('active');
       });
     }
+
+    function addNWItem(type) {
+  const listId = type === 'asset' ? 'assetList' : 'liabList';
+  const list = document.getElementById(listId);
+
+  // Remove empty state if present
+  const emptyRow = list.querySelector('.empty-state');
+  if (emptyRow) emptyRow.remove();
+
+}
+
 
     /* ══════════════════════════════════════════════
        HELPERS
